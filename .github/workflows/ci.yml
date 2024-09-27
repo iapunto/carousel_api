@@ -35,3 +35,18 @@ jobs:
         with:
           name: package
           path: dist/
+      
+      - name: Generate coverage report
+        run: |
+          coverage run --source=carousel_api -m unittest discover -s tests
+          coverage report -m
+          coverage xml
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ '56d29ad3-d20c-488a-af76-91267bb93f95' }}     # Token de Codecov (configúralo en los secrets de tu repositorio)
+          file: ./coverage.xml                    # Ruta al archivo de informe de cobertura generado
+          flags: unittests                         # Etiqueta para identificar las pruebas unitarias
+          name: codecov-umbrella                   # Nombre del informe en Codecov (opcional)
+          fail_ci_if_error: true                   # Fallar el CI si hay un error al subir la cobertura
