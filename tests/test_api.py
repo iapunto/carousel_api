@@ -1,5 +1,5 @@
 import unittest
-from carousel_api.api import app
+from api import app
 
 class TestAPI(unittest.TestCase):
     def setUp(self):
