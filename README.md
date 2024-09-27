@@ -1,6 +1,6 @@
 # CAROUSEL API
 
-[![Build Status](https://github.com/iapunto/carousel_api/blob/main/.github/workflows/ci.yml)](https://github.com/iapunto/carousel_api/blob/main/.github/workflows/ci.yml)
+[![CI/CD Pipeline for Carousel API](https://github.com/iapunto/carousel_api/actions/workflows/ci.yml/badge.svg)](https://github.com/iapunto/carousel_api/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/github/tu_usuario/carousel_api/badge.svg?branch=main)](https://coveralls.io/github/tu_usuario/carousel_api?branch=main)
 [![PyPI version](https://badge.fury.io/py/carousel_api.svg)](https://badge.fury.io/py/carousel_api)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
