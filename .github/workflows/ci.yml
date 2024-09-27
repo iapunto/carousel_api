@@ -30,10 +30,6 @@ jobs:
           export MODE=simulator  # Establece la variable de entorno MODE
           python -m unittest discover -s tests  # Ejecuta las pruebas unitarias (si las tienes)
 
-      - name: Build package
-        run: |
-          python setup.py sdist bdist_wheel
-
       - name: Upload artifacts (opcional)
         uses: actions/upload-artifact@v3
         with:
