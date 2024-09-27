@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest  # Sistema operativo en el que se ejecutará el trabajo
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true 
 
     steps:
       - uses: actions/checkout@v4  # Descargar el código del repositorio
