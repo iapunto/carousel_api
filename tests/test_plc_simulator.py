@@ -3,7 +3,7 @@ from models.plc_simulator import PLCSimulator
 
 class TestPLCSimulator(unittest.TestCase):
     def setUp(self):
-        self.plc_simulator = PLCSimulator('127.0.0.1', 2000)
+        self.plc_simulator = PLCSimulator('127.0.0.1', 2000)  # No se usan realmente la IP y el puerto en el simulador
 
     def test_connect(self):
         """
@@ -38,6 +38,20 @@ class TestPLCSimulator(unittest.TestCase):
         self.assertIsNotNone(position)
         self.assertIsInstance(position, int)
         self.assertTrue(0 <= position <= 9)
+
+    def test_send_command_muevete(self):
+        """
+        Prueba el comando MUEVETE (1) con argumento válido.
+        """
+        self.plc_simulator.connect()
+        initial_position = self.plc_simulator.current_position
+        new_position = 5  # Nueva posición deseada
+        self.plc_simulator.send_command(bytes([1, new_position]))  # Envía el comando y el argumento como bytes
+        time.sleep(3)  # Espera a que termine la simulación del movimiento
+
+        # Verifica que la posición se actualizó correctamente
+        self.assertEqual(self.plc_simulator.current_position, new_position)
+        self.assertNotEqual(self.plc_simulator.current_position, initial_position)
 
     def tearDown(self):
         self.plc_simulator.close()
