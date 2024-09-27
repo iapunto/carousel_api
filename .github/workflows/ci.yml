@@ -13,7 +13,7 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true 
 
     steps:
-      - uses: actions/checkout@v4  # Descargar el código del repositorio
+      - uses: actions/checkout@v3  # Descargar el código del repositorio
 
       - name: Set up Python
         uses: actions/setup-python@v4
