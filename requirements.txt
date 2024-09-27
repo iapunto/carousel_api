@@ -3,3 +3,4 @@ Flask==3.0.3
 Flask-Cors==5.0.0
 python-dotenv==1.0.1
 waitress==3.0.0
+coverage==7.6.1
