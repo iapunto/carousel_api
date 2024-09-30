@@ -1,4 +1,5 @@
 import unittest
+import time
 from models.plc_simulator import PLCSimulator
 
 class TestPLCSimulator(unittest.TestCase):
