@@ -27,10 +27,10 @@ mode = os.getenv('MODE')
 
 # Crear instancias de PLC y controlador según el modo
 if mode == 'simulator':
-    from .models.plc_simulator import PLCSimulator
+    from models.plc_simulator import PLCSimulator
     plc = PLCSimulator(plc_ip, plc_port)
 elif mode == 'plc':
-    from .models.plc import PLC
+    from models.plc import PLC
     plc = PLC(plc_ip, plc_port)
 else:
     raise ValueError("Modo inválido en el archivo .env. Debe ser 'simulator' o 'plc'")
