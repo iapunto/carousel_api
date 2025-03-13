@@ -7,7 +7,7 @@ Uso de CustomTkinter para mejorar el aspecto visual.
 """
 
 import customtkinter as ctk  # Importar CustomTkinter [[1]]
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import json
 import threading
 from PIL import Image  # Para manejar imágenes del ícono
