@@ -96,7 +96,7 @@ class MainWindow:
 
         # Botón Enviar
         send_button = ctk.CTkButton(
-            main_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="darkgreen")
+            main_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="dark-green")
         send_button.grid(row=3, column=0, columnspan=2, pady=10)
 
     def send_test_command(self):
@@ -137,7 +137,7 @@ class MainWindow:
     def create_exit_button(self):
         """Crea un botón de salida en la interfaz"""
         exit_button = ctk.CTkButton(
-            self.root, text="Salir", command=self.exit_app, fg_color="red", hover_color="darkred")
+            self.root, text="Salir", command=self.exit_app, fg_color="red", hover_color="dark-red")
         exit_button.pack(side="bottom", pady=10)
 
     def minimize_to_tray(self):
@@ -244,7 +244,7 @@ class MainWindow:
             print(f"Error al actualizar estado: {str(e)}")
 
         # Programar próxima actualización
-        self.root.after(2000, self.update_status)
+        self.root.after(30000, self.update_status)
 
     def create_config_frame(self, parent):
         """Frame para configuración de IP, puerto y modo"""
