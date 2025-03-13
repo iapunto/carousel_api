@@ -2,6 +2,7 @@
   "cSpell.words": [
     "columnspan",
     "customtkinter",
+    "descripcion",
     "flasgger",
     "getenv",
     "highlightthickness",
@@ -9,6 +10,7 @@
     "minimización",
     "monitoreo",
     "MUEVETE",
+    "OPERACION",
     "padx",
     "pady",
     "pyinstaller",
@@ -18,6 +20,7 @@
     "Tkinter",
     "ttkthemes",
     "uiversion",
+    "variador",
     "venv",
     "wsgi"
   ]
