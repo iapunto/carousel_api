@@ -102,7 +102,7 @@ def determinar_bandera(estado, valor_bit):
     elif estado == "ALARMA":
         return "Activa" if valor_bit == 1 else "OK"
     elif estado == "PARADA_EMERGENCIA":
-        return "Activa" if valor_bit == 0 else "Desactivada"
+        return "Activa" if valor_bit == 1 else "Desactivada"
     elif estado == "VFD":
         return "Fallo" if valor_bit == 1 else "OK"
     elif estado == "ERROR_POSICIONAMIENTO":
