@@ -1,6 +1,8 @@
-flasgger==0.9.7.1
-Flask==3.0.3
-Flask-Cors==5.0.0
-python-dotenv==1.0.1
-waitress==3.0.0
-coverage==7.6.1
+# requirements.txt
+# Para instalar las dependencias: pip install -r requirements.txt [[5]]
+
+Flask==2.3.2          # Framework para la API [[3]]
+Flask-CORS==4.0.0     # Soporte para CORS en Flask [[8]]
+flasgger==0.9.7.1       # Documentación Swagger para la API [[5]]
+pyinstaller==5.13.2   # Empaquetador para la app de escritorio [[1]]
+ttkthemes==3.2.2      # Temas mejorados para Tkinter [[9]]
