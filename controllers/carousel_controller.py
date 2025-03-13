@@ -9,11 +9,8 @@ Fecha de creación: 2023-09-13
 Última modificación: 2024-09-16
 """
 
-# from models.plc import PLC
-from models.plc_simulator import PLCSimulator
 from commons.utils import interpretar_estado_plc
 import time
-import importlib
 
 class CarouselController:
     """
@@ -26,157 +23,100 @@ class CarouselController:
         """
         self.plc = plc
 
-    def send_command(self, command, argument=None):
-        if self.plc.connect():
-            # Envía el comando 0 (STATUS) para obtener el estado actual
+    def send_command(self, command: int, argument: int = None):
+        """
+        Envía un comando al PLC y maneja la respuesta.
+
+        Args:
+            command: El comando a enviar (un entero entre 0-255).
+            argument: Opcional - El argumento a enviar (un entero entre 0-255).
+        """
+        if not self.plc.connect():
+            print("No se pudo conectar al PLC. Verifica la configuración.")
+            return
+
+        try:
+            # Envía el comando STATUS para obtener el estado actual
             self.plc.send_command(0)
             time.sleep(0.2)
 
-            # Lee el estado del PLC
+            # Recibe y muestra el estado actual del PLC
             response = self.plc.receive_response()
-            time.sleep(0.2)
-
             if response:
-                # Interpreta y muestra el estado del PLC
                 self.print_plc_status(response['status_code'])
-
-                # Muestra la posición del carrusel
                 print(f"Posición actual del carrusel: {response['position']}")
-                
-                # Verifica si el PLC está en el estado adecuado para moverse
-                if self.is_plc_ready_to_move(response['status_code']):
-                    if command == 1:  # Comando MUEVETE
-                        try:
-                            target_position = int(argument)
-                            if 0 <= argument <= 9:
-                                # Envía el comando de movimiento y luego el argumento
-                                #self.plc.send_command(command)
-                                full_command = bytes([command, target_position])
-                                self.plc.send_command(full_command)
-                                time.sleep(0.5) 
-                                #self.plc.send_argument(target_position)
+            else:
+                print("No se recibió respuesta al comando STATUS.")
+                return
 
-                                # Recibe la respuesta al comando MUEVETE (si es necesario)
-                                move_response = self.plc.receive_response()
-                                if move_response:
-                                    print(f"Respuesta al comando MUEVETE: {move_response}")
+            # Verifica si el PLC está listo para moverse
+            if not self.is_plc_ready_to_move(response['status_code']):
+                print("El PLC no está en el estado adecuado para moverse.")
+                return
 
-                            else:
-                                print("Error: Número de bucket inválido.")
-                        except ValueError:
-                            print("Error: Argumento inválido para el comando MUEVETE.")
-                    # ... (otros comandos)
-                    else:
-                        # Para otros comandos, envía el comando y recibe la respuesta directamente
-                        self.plc.send_command(command)
-                        response = self.plc.receive_response()
-                        if response:
-                            print(f"Respuesta al comando {command}: {response}")
-                        else:
-                            print(f"No se recibió respuesta al comando {command}.")
+            # Envía el comando principal y argumento si es necesario
+            if command == 1:  # Comando MUEVETE
+                if argument is None or not (0 <= argument <= 9):
+                    print("Error: Argumento inválido o fuera de rango (0-9).")
+                    return
 
+                # Envía el comando y el argumento como bytes
+                self.plc.send_command(command, argument)
+                print(f"Comando enviado: {command}, Argumento: {argument}")  # Mensaje de depuración
+                time.sleep(0.5)
+
+                # Recibe la respuesta al comando MUEVETE
+                move_response = self.plc.receive_response()
+                if move_response:
+                    print(f"Respuesta al comando MUEVETE: {move_response}")
                 else:
-                    print("El PLC no está en el estado adecuado para moverse.")
+                    print("No se recibió respuesta al comando MUEVETE.")
+            else:
+                # Para otros comandos, envía solo el comando
+                self.plc.send_command(command)
+                print(f"Comando enviado: {command}, Argumento: None")  # Mensaje de depuración
+                time.sleep(0.5)
 
-        else:
-            print("No se pudo conectar al PLC. Verifica la configuración.")
-    
-    def close_connection(self):
-        self.plc.close() 
-    
-    # def send_command(self, command, argument=None, home=None, reset=None, stop=None):
-    #     if self.plc.connect():
-    #         # Envía el comando 0 (STATUS) para obtener el estado actual
-    #         self.plc.send_command(0)
-    #         time.sleep(0.2)
+                # Recibe la respuesta al comando
+                response = self.plc.receive_response()
+                if response:
+                    print(f"Respuesta al comando {command}: {response}")
+                else:
+                    print(f"No se recibió respuesta al comando {command}.")
 
-    #         # Lee el estado del PLC
-    #         response = self.plc.receive_response()
-
-    #         if response:
-    #             # ... (impresión de estado y posición)
-
-    #             # Verifica si el PLC está en el estado adecuado para moverse
-    #             if self.is_plc_ready_to_move(response['status_code']):
-    #                 if command == 1:  # Comando MUEVETE
-    #                     try:
-    #                         target_position = int(argument)
-    #                         if 0 <= target_position <= 9:
-    #                             # Envía el comando de movimiento y luego el argumento
-    #                             full_command = bytes([command, target_position])
-    #                             self.plc.send_command(full_command)
-    #                             time.sleep(0.5)
-
-    #                             # Recibe la respuesta al comando MUEVETE (si es necesario)
-    #                             move_response = self.plc.receive_response()
-    #                             if move_response:
-    #                                 print(f"Respuesta al comando MUEVETE: {move_response}")
-
-    #                         else:
-    #                             print("Error: Número de bucket inválido.")
-    #                     except ValueError:
-    #                         print("Error: Argumento inválido para el comando MUEVETE.")
-
-    #                 # Manejo de otros comandos
-    #                 else:
-    #                     command_encode = bytes(command)
-    #                     home_encode = bytes(home)
-    #                     reset_encode = bytes(reset)
-    #                     stop_encode = bytes(stop)
-    #                     # Envía el comando principal
-    #                     self.plc.send_command(command_encode)
-
-    #                     # Envía los argumentos adicionales si están presentes
-    #                     if home is not None:
-    #                         time.sleep(0.5)
-    #                         self.plc.send_command(home_encode)
-    #                     if reset is not None:
-    #                         time.sleep(0.5)
-    #                         self.plc.send_command(reset_encode)
-    #                     if stop is not None:
-    #                         time.sleep(0.5)
-    #                         self.plc.send_command(stop_encode)
-
-    #                     # Recibe la respuesta al comando (si es necesario)
-    #                     response = self.plc.receive_response()
-    #                     if response:
-    #                         print(f"Respuesta al comando {command}: {response}")
-    #                     else:
-    #                         print(f"No se recibió respuesta al comando {command}.")
-
-    #             else:
-    #                 print("El PLC no está en el estado adecuado para moverse.")
-
-    #         self.plc.close()
-    #     else:
-    #         print("No se pudo conectar al PLC. Verifica la configuración.")
+        except Exception as e:
+            print(f"Error durante la comunicación con el PLC: {e}")
+        finally:
+            self.plc.close()
 
     def monitor_plc_status(self):
         """
         Monitorea continuamente el estado del PLC y lo muestra en la consola.
         """
-
-        if self.plc.connect():
-            try:
-                while True:
-                    # Lee el estado y la posición del PLC
-                    self.plc.send_command(0) # Envía el comando 0 para obtener el estado
-                    response = self.plc.receive_response()
-
-                    if response:
-                        # Interpreta y muestra el estado del PLC
-                        self.print_plc_status(response['status_code'])
-
-                        # Muestra la posición
-                        print(f"Posición actual del carrusel: {response['position']}")
-
-                    # time.sleep(1)
-
-            except KeyboardInterrupt:
-                print("Monitoreo detenido por el usuario.")
-
-        else:
+        if not self.plc.connect():
             print("No se pudo conectar al PLC. Verifica la configuración.")
+            return
+
+        try:
+            while True:
+                # Envía el comando STATUS para obtener el estado actual
+                self.plc.send_command(0)
+                time.sleep(0.2)
+
+                # Recibe y muestra el estado actual del PLC
+                response = self.plc.receive_response()
+                if response:
+                    self.print_plc_status(response['status_code'])
+                    print(f"Posición actual del carrusel: {response['position']}")
+                else:
+                    print("No se recibió respuesta al comando STATUS.")
+
+                time.sleep(1)
+
+        except KeyboardInterrupt:
+            print("Monitoreo detenido por el usuario.")
+        finally:
+            self.plc.close()
 
     def print_plc_status(self, status_code):
         """
@@ -192,10 +132,12 @@ class CarouselController:
         Verifica si el PLC está en el estado adecuado para moverse.
         """
         estados_plc = interpretar_estado_plc(status_code)
-        return estados_plc['READY'] == 'El equipo está listo para operar' and \
-               estados_plc['RUN'] == 'El equipo está detenido' and \
-               estados_plc['MODO_OPERACION'] == 'Remoto' and \
-               estados_plc['ALARMA'] == 'No hay alarma' and \
-               estados_plc['PARADA_EMERGENCIA'] == 'Sin parada de emergencia' and \
-               estados_plc['VFD'] == 'El variador de velocidad está OK' and \
-               estados_plc['ERROR_POSICIONAMIENTO'] == 'No hay error de posicionamiento'
+        return (
+            estados_plc['READY'] == 'El equipo está listo para operar' and
+            estados_plc['RUN'] == 'El equipo está detenido' and
+            estados_plc['MODO_OPERACION'] == 'Remoto' and
+            estados_plc['ALARMA'] == 'No hay alarma' and
+            estados_plc['PARADA_EMERGENCIA'] == 'Sin parada de emergencia' and
+            estados_plc['VFD'] == 'El variador de velocidad está OK' and
+            estados_plc['ERROR_POSICIONAMIENTO'] == 'No hay error de posicionamiento'
+        )

@@ -23,8 +23,8 @@ ESTADOS_PLC = {
     },
     4: {
         'nombre': 'PARADA_EMERGENCIA',
-        0: 'Sin parada de emergencia',
-        1: 'Parada de emergencia presionada y activa'
+        0: 'Parada de emergencia presionada y activa',
+        1: 'Sin parada de emergencia'
     },
     5: {
         'nombre': 'VFD',

@@ -17,12 +17,12 @@ from flasgger import Swagger
 from controllers.carousel_controller import CarouselController
 from dotenv import load_dotenv
 import os
-import time 
+import time
 
 # Cargar variables de entorno
 load_dotenv()
 plc_ip = os.getenv('PLC_IP')
-plc_port = int(os.getenv('PLC_PORT'))
+plc_port = int(3200)  # Puerto predeterminado si no se especifica
 mode = os.getenv('MODE')
 
 # Crear instancias de PLC y controlador según el modo
@@ -44,7 +44,6 @@ CORS(app, resources={r"/*": {"origins": "*"}})  # Permitir cualquier origen (par
 app.config['SWAGGER'] = {
     'title': 'API de Control de Carrusel',
     'uiversion': 3
-    # 'basePath': '/v1'
 }
 swagger = Swagger(app)
 
@@ -52,9 +51,6 @@ swagger = Swagger(app)
 def get_status():
     """
     Obtiene el estado y la posición actual del PLC.
-
-    GET:
-        Obtiene el estado y la posición actual del PLC.
     ---
     tags:
       - Estado del PLC
@@ -75,28 +71,24 @@ def get_status():
       500:
         description: Error al comunicarse con el PLC.
     """
+    try:
+        if not plc.connect():
+            return jsonify({'error': 'No se pudo conectar al PLC'}), 500
 
-    if plc.connect():
-        try:
-            # Envía el comando 0 (STATUS) para obtener el estado actual
-            plc.send_command(0)
+        # Envía el comando STATUS (0) para obtener el estado actual
+        plc.send_command(0)
+        time.sleep(0.5)  # Espera para recibir la respuesta
 
-            # Espera un tiempo prudencial para que el PLC envíe la respuesta (ajusta según sea necesario)
-            time.sleep(0.5) 
-
-            # Lee el estado y la posición del PLC
-            response = plc.receive_response()
-
-            if response:
-                return jsonify(response), 200
-            else:
-                return jsonify({'error': 'No se pudo obtener el estado del PLC'}), 500
-        except Exception as e:
-            return jsonify({'error': f'Error al comunicarse con el PLC: {e}'}), 500
-        finally:
-            plc.close()
-    else:
-        return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+        # Recibe el estado y la posición del PLC
+        response = plc.receive_response()
+        if response:
+            return jsonify(response), 200
+        else:
+            return jsonify({'error': 'No se pudo obtener el estado del PLC'}), 500
+    except Exception as e:
+        return jsonify({'error': f'Error al comunicarse con el PLC: {e}'}), 500
+    finally:
+        plc.close()
 
 @app.route('/v1/command', methods=['POST'])
 def send_command():
@@ -152,35 +144,33 @@ def send_command():
                   type: string
                   example: Error al comunicarse con el PLC
     """
+    try:
+        if not plc.connect():
+            return jsonify({'error': 'No se pudo conectar al PLC'}), 500
 
-    if plc.connect():
-        try:
-            data = request.get_json()
-            command = data.get('command')
-            argument = data.get('argument')
+        data = request.get_json()
+        command = data.get('command')
+        argument = data.get('argument')
 
-            if command is not None:
-                # Verificar si el comando es válido
-                if not isinstance(command, int) or command < 0 or command > 255:
-                    return jsonify({'error': 'Comando inválido'}), 400
+        if command is None:
+            return jsonify({'error': 'Comando no especificado'}), 400
 
-                if argument is not None:
-                    # Verificar si el argumento es válido
-                    if not isinstance(argument, int) or argument < 0 or argument > 255:
-                        return jsonify({'error': 'Argumento inválido'}), 400
+        # Validar el comando
+        if not isinstance(command, int) or command < 0 or command > 255:
+            return jsonify({'error': 'Comando inválido'}), 400
 
-                # Enviar el comando y el argumento al PLC
-                carousel_controller.send_command(command, argument)
+        # Validar el argumento (si existe)
+        if argument is not None and (not isinstance(argument, int) or argument < 0 or argument > 255):
+            return jsonify({'error': 'Argumento inválido'}), 400
 
-                return jsonify({'message': 'Comando enviado exitosamente'}), 200
-            else:
-                return jsonify({'error': 'Comando no especificado'}), 400
-        except Exception as e:
-            return jsonify({'error': f'Error al comunicarse con el PLC: {e}'}), 500
-        finally:
-            plc.close()
-    else:
-        return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+        # Enviar el comando y el argumento al PLC
+        carousel_controller.send_command(command, argument)
+
+        return jsonify({'message': 'Comando enviado exitosamente'}), 200
+    except Exception as e:
+        return jsonify({'error': f'Error al comunicarse con el PLC: {e}'}), 500
+    finally:
+        plc.close()
 
 if __name__ == '__main__':
     app.run(debug=False)

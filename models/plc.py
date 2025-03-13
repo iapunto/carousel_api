@@ -10,7 +10,6 @@ Fecha de creación: 2023-09-13
 """
 
 import socket
-import struct
 
 class PLC:
     """
@@ -50,23 +49,38 @@ class PLC:
             self.sock.close()
             print("Conexión cerrada")
 
-    def send_command(self, command):
+    def send_command(self, command: int, argument: int = None):
         """
-        Envía un comando al PLC.
+        Envía un comando al PLC con formato binario.
 
         Args:
-            command: El comando a enviar (un entero que representa un byte).
+            command: Entero de 8 bits (0-255).
+            argument: Opcional - Entero de 8 bits (0-255).
+
+        Raises:
+            ValueError: Si los valores están fuera de rango.
+            RuntimeError: Si hay error de comunicación.
         """
-
+        if not (0 <= command <= 255):
+            raise ValueError("Comando debe ser entre 0-255")
+        
+        if argument is not None and not (0 <= argument <= 255):
+            raise ValueError("Argumento debe ser entre 0-255")
+        
         if not self.sock:
-            raise Exception("No hay conexión establecida con el PLC.")
-
+            raise RuntimeError("No hay conexión activa con el PLC")
+        
         try:
-            # Envía el comando como un solo byte
-            self.sock.sendall(command)
-
+            # Empaquetar comando y argumento en bytes
+            data = bytes([command])  # Convierte el comando a bytes
+            if argument is not None:
+                data += bytes([argument])  # Agrega el argumento como bytes
+            
+            self.sock.sendall(data)  # Enviar datos como bytes
+            print(f"Comando enviado: {command}, Argumento: {argument}")
         except Exception as e:
-            print(f"Error al enviar datos al PLC: {e}")
+            self.close()
+            raise RuntimeError(f"Error enviando datos: {str(e)}")
 
     def receive_response(self):
         """
@@ -75,10 +89,9 @@ class PLC:
         Returns:
             Un diccionario con el código de estado y la posición del PLC, o None si ocurre un error.
         """
-
         if not self.sock:
-            raise Exception("No hay conexión establecida con el PLC.")
-
+            raise RuntimeError("No hay conexión activa con el PLC")
+        
         try:
             # Recibe la respuesta (1 byte para estado y 1 para posición)
             status_data = self.sock.recv(1)
@@ -103,20 +116,24 @@ class PLC:
             print(f"Ocurrió un error inesperado al recibir datos: {e}")
             return None
 
-    def send_argument(self, argument):
+    def get_current_status(self):
         """
-        Envía un argumento al PLC.
+        Obtiene el estado actual del PLC.
 
-        Args:
-            argument: El argumento a enviar (un entero que representa un byte).
+        Returns:
+            Diccionario con estado y posición actuales.
         """
-
-        if not self.sock:
-            raise Exception("No hay conexión establecida con el PLC.")
-
+        if not self.connect():
+            raise RuntimeError("No se pudo conectar al PLC")
+        
         try:
-            # Envía el argumento como un solo byte
-            self.sock.sendall(bytes([argument])) 
-
+            self.send_command(0)  # Comando STATUS
+            time.sleep(0.5)
+            response = self.receive_response()
+            return {
+                'status_code': response['status_code'],
+                'position': response['position']
+            }
         except Exception as e:
-            print(f"Error al enviar datos al PLC: {e}")
+            self.close()
+            raise RuntimeError(f"Error al obtener el estado del PLC: {str(e)}")
