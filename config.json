@@ -1,1 +1,1 @@
-{"ip": "192.168.1.100", "port": 3200, "api_port": 5000, "simulator_enabled": true}
+{"ip": "192.168.1.50", "port": 3200, "api_port": 5001, "simulator_enabled": false}

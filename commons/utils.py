@@ -18,13 +18,13 @@ ESTADOS_PLC = {
     },
     3: {
         'nombre': 'ALARMA',
-        0: 'No hay alarma',
-        1: 'Alarma activa'
+        0: 'Alarma activa',
+        1: 'No hay alarma'
     },
     4: {
         'nombre': 'PARADA_EMERGENCIA',
-        0: 'Sin parada de emergencia',
-        1: 'Parada de emergencia presionada y activa'
+        0: 'Parada de emergencia presionada y activa',
+        1: 'Sin parada de emergencia'
     },
     5: {
         'nombre': 'VFD',

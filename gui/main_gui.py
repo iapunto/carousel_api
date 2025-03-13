@@ -96,7 +96,7 @@ class MainWindow:
 
         # Botón Enviar
         send_button = ctk.CTkButton(
-            main_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="dark-green")
+            main_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="darkgreen")
         send_button.grid(row=3, column=0, columnspan=2, pady=10)
 
     def send_test_command(self):
@@ -137,7 +137,7 @@ class MainWindow:
     def create_exit_button(self):
         """Crea un botón de salida en la interfaz"""
         exit_button = ctk.CTkButton(
-            self.root, text="Salir", command=self.exit_app, fg_color="red", hover_color="dark-red")
+            self.root, text="Salir", command=self.exit_app, fg_color="red", hover_color="darkred")
         exit_button.pack(side="bottom", pady=10)
 
     def minimize_to_tray(self):
