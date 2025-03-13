@@ -216,9 +216,13 @@ class MainWindow:
             row=row, column=1, padx=10, pady=5, sticky="w")
 
     def update_status(self):
-        """Actualiza el estado del PLC cada 2 segundos"""
+        """Actualiza el estado del PLC en la GUI."""
         try:
             status_data = self.plc.get_current_status()
+
+            if status_data["status_code"] is None or status_data["position"] is None:
+                print("No se recibió respuesta válida del PLC.")
+                return
 
             # Interpretar estado
             interpreted_status = interpretar_estado_plc(
@@ -227,10 +231,10 @@ class MainWindow:
             # Actualizar etiquetas
             for key, label in self.status_labels.items():
                 value = interpreted_status.get(key, "Desconocido")
-                if "OK" in value or "listo" in value or "detenido" in value:
-                    label.configure(text="OK", text_color="green")
-                elif "Fallo" in value or "alarma" in value or "error" in value:
-                    label.configure(text="Fallo", text_color="red")
+                if value in ["OK", "Remoto", "Desactivada"]:
+                    label.configure(text=value, text_color="green")
+                elif value in ["Activa", "Manual", "Fallo"]:
+                    label.configure(text=value, text_color="red")
                 else:
                     label.configure(text=value)
 
@@ -239,12 +243,11 @@ class MainWindow:
 
             # Registrar mensaje
             print(f"Estado actualizado: {interpreted_status}")
-
         except Exception as e:
             print(f"Error al actualizar estado: {str(e)}")
 
         # Programar próxima actualización
-        self.root.after(30000, self.update_status)
+        self.root.after(60000, self.update_status)
 
     def create_config_frame(self, parent):
         """Frame para configuración de IP, puerto y modo"""

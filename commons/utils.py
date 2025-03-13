@@ -77,6 +77,33 @@ def interpretar_estado_plc(status_code):
         bit = detalles["bit"]
         # Extraer el valor del bit correspondiente
         valor_bit = (status_code >> bit) & 1
-        estados_activos[estado] = detalles["descripcion"][valor_bit]
+        estados_activos[estado] = determinar_bandera(estado, valor_bit)
 
     return estados_activos
+
+
+def determinar_bandera(estado, valor_bit):
+    """
+    Determina el estado basándose en su descripción.
+
+    Args:
+        estado (str): Nombre del estado (por ejemplo, "ALARMA").
+        valor_bit (int): Valor del bit correspondiente al estado.
+
+    Returns:
+        str: Descripción específica del estado.
+    """
+    if estado == "READY":
+        return "OK" if valor_bit == 1 else "Inactivo"
+    elif estado == "RUN":
+        return "OK" if valor_bit == 1 else "Stop"
+    elif estado == "MODO_OPERACION":
+        return "Manual" if valor_bit == 1 else "Remoto"
+    elif estado == "ALARMA":
+        return "Activa" if valor_bit == 1 else "OK"
+    elif estado == "PARADA_EMERGENCIA":
+        return "Activa" if valor_bit == 1 else "Desactivada"
+    elif estado == "VFD":
+        return "Fallo" if valor_bit == 1 else "OK"
+    elif estado == "ERROR_POSICIONAMIENTO":
+        return "Fallo" if valor_bit == 1 else "OK"
