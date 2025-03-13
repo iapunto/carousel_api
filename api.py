@@ -4,7 +4,7 @@ API para el control de un carrusel vertical a través de un PLC.
 Autor: Industrias Pico S.A.S
 Desarrollo: IA Punto: Soluciones Integrales de Tecnología y Marketing
 Fecha: 2023-09-13
-Última modificación: 2024-09-27
+Última modificación: 2025-03-13
 """
 
 from flask import Flask, jsonify, request
