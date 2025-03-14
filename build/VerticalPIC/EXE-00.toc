@@ -54,7 +54,7 @@
  [],
  False,
  False,
- 1741924032,
+ 1741965143,
  [('runw.exe',
    'C:\\laragon\\www\\carousel_api\\venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')])

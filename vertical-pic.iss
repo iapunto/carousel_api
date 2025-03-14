@@ -11,6 +11,7 @@ OutputBaseFilename=Installer_VericalPIC
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin
+SetupIconFile="C:\laragon\www\carousel_api\assets\favicon.ico"
 
 ; Información de la empresa y desarrolladores
 AppPublisher=Industrias Pico
