@@ -286,10 +286,38 @@ class MainWindow:
             # Punto de control
             print(f"Estado interpretado: {interpreted_status}")
 
+            # Diccionario de colores por estado
+            color_palette = {
+                "El equipo está listo para operar": "green",
+                "El equipo no puede operar": "red",
+                "El equipo está en movimiento (comando de movimiento activo)": "gray",
+                "El equipo está detenido": "green",
+                "Modo Remoto": "green",
+                "Modo Manual": "red",
+                "No hay alarma": "green",
+                "Alarma activa": "red",
+                "Sin parada de emergencia": "green",
+                "Parada de emergencia presionada y activa": "red",
+                "El variador de velocidad está OK": "green",
+                "Error en el variador de velocidad": "red",
+                "No hay error de posicionamiento": "green",
+                "Ha ocurrido un error en el posicionamiento": "red",
+                "Ascendente": "blue",
+                "Descendente": "yellow"
+            }
+
             # Actualizar etiquetas
             for key, label in self.status_labels.items():
                 value = interpreted_status.get(key, "Desconocido")
                 label.configure(text=value)
+                # Aplicar color según el valor
+                # Color predeterminado: negro
+                label_color = color_palette.get(value, "black")
+                label.configure(text_color=label_color)
+
+            # Actualizar posición actual
+            position = status_data["position"]
+            self.position_label.configure(text=str(position))
 
         except Exception as e:
             print(f"Error al actualizar estado: {str(e)}")
