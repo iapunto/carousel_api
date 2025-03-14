@@ -18,8 +18,8 @@ ESTADOS_PLC = {
     "MODO_OPERACION": {
         "bit": 2,
         "descripcion": {
-            0: "Modo Remoto",
-            1: "Modo Manual"
+            0: "Modo Manual",
+            1: "Modo Remoto"
         }
     },
     "ALARMA": {
@@ -96,13 +96,13 @@ def determinar_bandera(estado, valor_bit):
     if estado == "READY":
         return "OK" if valor_bit == 1 else "Inactivo"
     elif estado == "RUN":
-        return "OK" if valor_bit == 1 else "Stop"
+        return "Moviendose" if valor_bit == 1 else "Parado"
     elif estado == "MODO_OPERACION":
         return "Manual" if valor_bit == 0 else "Remoto"
     elif estado == "ALARMA":
-        return "Activa" if valor_bit == 1 else "OK"
+        return "Activa" if valor_bit == 1 else "Sin Alarma"
     elif estado == "PARADA_EMERGENCIA":
-        return "Activa" if valor_bit == 1 else "Desactivada"
+        return "Desactivada" if valor_bit == 1 else "Presionada"
     elif estado == "VFD":
         return "Fallo" if valor_bit == 1 else "OK"
     elif estado == "ERROR_POSICIONAMIENTO":
