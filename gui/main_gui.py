@@ -1,6 +1,6 @@
 """
 Interfaz gráfica principal para control de carrusel industrial
-Autor: Industrias Pico S.A.S
+Autor: IA Punto Soluciones Tecnológicas
 Fecha: 2024-09-27
 
 Uso de CustomTkinter para mejorar el aspecto visual.
