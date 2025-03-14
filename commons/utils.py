@@ -62,13 +62,13 @@ ESTADOS_PLC = {
 
 def interpretar_estado_plc(status_code):
     """
-    Interpreta el código de estado del PLC y devuelve un diccionario con los estados y sus descripciones.
+    Interpreta el código de estado del PLC y devuelve un diccionario con los estados y sus descripciones específicas.
 
     Args:
         status_code: El código de estado del PLC en formato entero (8 bits).
 
     Returns:
-        Un diccionario donde las claves son los nombres de los estados y los valores son sus descripciones.
+        Un diccionario donde las claves son los nombres de los estados y los valores son sus descripciones específicas.
     """
     estados_activos = {}
 
@@ -77,33 +77,7 @@ def interpretar_estado_plc(status_code):
         bit = detalles["bit"]
         # Extraer el valor del bit correspondiente
         valor_bit = (status_code >> bit) & 1
-        estados_activos[estado] = determinar_bandera(estado, valor_bit)
+        # Obtener la descripción específica del estado basada en el valor del bit
+        estados_activos[estado] = detalles["descripcion"][valor_bit]
 
     return estados_activos
-
-
-def determinar_bandera(estado, valor_bit):
-    """
-    Determina el estado basándose en su descripción.
-
-    Args:
-        estado (str): Nombre del estado (por ejemplo, "ALARMA").
-        valor_bit (int): Valor del bit correspondiente al estado.
-
-    Returns:
-        str: Descripción específica del estado.
-    """
-    if estado == "READY":
-        return "OK" if valor_bit == 1 else "Inactivo"
-    elif estado == "RUN":
-        return "OK" if valor_bit == 1 else "Stop"
-    elif estado == "MODO_OPERACION":
-        return "Manual" if valor_bit == 0 else "Remoto"
-    elif estado == "ALARMA":
-        return "Activa" if valor_bit == 1 else "OK"
-    elif estado == "PARADA_EMERGENCIA":
-        return "Activa" if valor_bit == 1 else "Desactivada"
-    elif estado == "VFD":
-        return "Fallo" if valor_bit == 1 else "OK"
-    elif estado == "ERROR_POSICIONAMIENTO":
-        return "Fallo" if valor_bit == 1 else "OK"

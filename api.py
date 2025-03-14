@@ -7,6 +7,9 @@ Fecha: 2023-09-13
 Última modificación: 2025-03-13
 """
 
+import logging
+from commons.utils import interpretar_estado_plc
+from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from flask import Flask, jsonify, request
 from flasgger import Swagger
 from flask_cors import CORS

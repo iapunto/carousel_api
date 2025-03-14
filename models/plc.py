@@ -98,8 +98,8 @@ class PLC:
             data = struct.pack('B', command)
             if argument is not None:
                 data += struct.pack('B', argument)
-
             self.sock.sendall(data)
+            print(f"Datos enviados al PLC: {data}")
             return True
         except (socket.timeout, BrokenPipeError) as e:
             self.close()
@@ -121,6 +121,7 @@ class PLC:
         try:
             # Recibir exactamente 2 bytes [[6]]
             data = self.sock.recv(2)
+            print(f"Datos recibidos del PLC: {data}")
             if len(data) < 2:
                 raise RuntimeError("Respuesta incompleta del PLC")
 
