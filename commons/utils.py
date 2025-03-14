@@ -98,7 +98,7 @@ def determinar_bandera(estado, valor_bit):
     elif estado == "RUN":
         return "OK" if valor_bit == 1 else "Stop"
     elif estado == "MODO_OPERACION":
-        return "Manual" if valor_bit == 1 else "Remoto"
+        return "Manual" if valor_bit == 0 else "Remoto"
     elif estado == "ALARMA":
         return "Activa" if valor_bit == 1 else "OK"
     elif estado == "PARADA_EMERGENCIA":

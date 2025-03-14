@@ -6,11 +6,13 @@ Fecha: 2024-09-27
 Uso de CustomTkinter para mejorar el aspecto visual.
 """
 
+import os
+import sys
 import customtkinter as ctk  # Importar CustomTkinter [[1]]
 from tkinter import messagebox, simpledialog
 import json
 import threading
-from PIL import Image  # Para manejar imágenes del ícono
+from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
 
@@ -26,7 +28,21 @@ ctk.set_appearance_mode("dark")  # Modo oscuro
 ctk.set_default_color_theme("dark-blue")  # Tema azul
 
 
+def resource_path(relative_path):
+    """
+        Obtiene la ruta absoluta de un recurso, compatible con PyInstaller.
+        """
+    try:
+        # PyInstaller crea una carpeta temporal y almacena los recursos allí
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
 class MainWindow:
+
     def __init__(self, root, plc, config):
         """
         Constructor de la ventana principal.
@@ -40,8 +56,14 @@ class MainWindow:
         self.plc = plc
         self.config = config
         self.root.title("Vertical PIC - Control de Carrusel")
-        root.iconbitmap("favicon.ico")
-        self.root.geometry("800x600")
+        # Configurar el ícono
+        icon_path = resource_path("assets/favicon.ico")
+        if os.path.exists(icon_path):
+            self.root.iconbitmap(icon_path)
+        else:
+            print(f"No se encontró el archivo de ícono: {icon_path}")
+
+        self.root.geometry("400x500")
 
         # Variables de control
         self.ip_var = ctk.StringVar(value=config["ip"])
@@ -55,49 +77,43 @@ class MainWindow:
         # Valor predeterminado para el argumento
         self.argument_var = ctk.StringVar(value="3")
 
+        # Crear el header
+        self.create_header()
+
         # Crear pestañas
         self.create_tabs()
 
         # Iniciar monitoreo en segundo plano
         self.update_status()
 
-        # Crear la pantalla principal
-        self.create_main_screen()
-
         # Configurar minimización al área de notificaciones
         self.tray_icon = None
         self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
 
-        # Botón Salir
-        self.create_exit_button()
+    def create_header(self):
+        """Crea la cabecera con el logo y el botón de salir."""
+        header_frame = ctk.CTkFrame(
+            self.root, height=180, bg_color="white", corner_radius=0)
+        header_frame.pack(fill="x", side="top")
 
-    def create_main_screen(self):
-        """Crea la pantalla principal con campos para enviar comandos"""
-        main_frame = ctk.CTkFrame(self.root, corner_radius=10)
-        main_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        # Cargar el logo
+        logo_path = resource_path("assets/logo.png")
+        if os.path.exists(logo_path):
+            logo_image = Image.open(logo_path)
+            logo_image = logo_image.resize(
+                (90, 40), Image.LANCZOS)  # Redimensionar el logo
+            logo_tk = ImageTk.PhotoImage(logo_image)
+            logo_label = ctk.CTkLabel(
+                header_frame, image=logo_tk, text="")
+            logo_label.image = logo_tk  # Mantener una referencia para evitar que se elimine
+            logo_label.pack(side="left", padx=30, pady=10)
+        else:
+            print(f"No se encontró el archivo de logo: {logo_path}")
 
-        # Título
-        title_label = ctk.CTkLabel(
-            main_frame, text="Enviar Comando al PLC", font=("Arial", 14, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2,
-                         pady=(5, 10), sticky="w")
-
-        # Campo para el comando
-        ctk.CTkLabel(main_frame, text="Comando:").grid(
-            row=1, column=0, padx=5, pady=5, sticky="w")
-        ctk.CTkEntry(main_frame, textvariable=self.command_var,
-                     width=50).grid(row=1, column=1, padx=5, pady=5)
-
-        # Campo para el argumento
-        ctk.CTkLabel(main_frame, text="Argumento:").grid(
-            row=2, column=0, padx=5, pady=5, sticky="w")
-        ctk.CTkEntry(main_frame, textvariable=self.argument_var,
-                     width=50).grid(row=2, column=1, padx=5, pady=5)
-
-        # Botón Enviar
-        send_button = ctk.CTkButton(
-            main_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="darkgreen")
-        send_button.grid(row=3, column=0, columnspan=2, pady=10)
+        # Botón de salir
+        exit_button = ctk.CTkButton(
+            header_frame, text="Salir", command=self.exit_app, fg_color="red", hover_color="darkred", width=80)
+        exit_button.pack(side="right", padx=30)
 
     def send_test_command(self):
         """Envía un comando al PLC para pruebas"""
@@ -145,13 +161,15 @@ class MainWindow:
         self.root.withdraw()  # Oculta la ventana principal
 
         # Crear un ícono para la bandeja del sistema
-        image = Image.open("favicon.ico")  # Reemplaza "icon.png" con tu ícono
+        # Reemplaza "icon.png" con tu ícono
+        image = resource_path("assets/favicon.ico")
+        icon = Image.open(image)
         menu = pystray.Menu(
             pystray.MenuItem('Restaurar', self.restore_window),
             pystray.MenuItem('Salir', self.exit_app)
         )
         self.tray_icon = pystray.Icon(
-            "favicon", image, "Vertical PIC", menu)
+            "favicon", icon, "Vertical PIC", menu)
         self.tray_icon.run()
 
     def restore_window(self):
@@ -175,9 +193,35 @@ class MainWindow:
         tab_estado = tab_view.add("Estado del PLC")
         self.create_estado_frame(tab_estado)
 
-        # Pestaña 2: Configuración
+        # Pestaña 2: Enviar Comandos
+        tab_comandos = tab_view.add("Enviar Comandos")
+        self.create_command_frame(tab_comandos)
+
+        # Pestaña 3: Configuración
         tab_config = tab_view.add("Configuración")
         self.create_config_frame(tab_config)
+
+    def create_command_frame(self, parent):
+        """Crea la pestaña para enviar comandos al PLC."""
+        command_frame = ctk.CTkFrame(parent, corner_radius=10)
+        command_frame.pack(padx=10, pady=10, fill="both", expand=True)
+
+        # Campo para el comando
+        ctk.CTkLabel(command_frame, text="Comando:").grid(
+            row=0, column=0, padx=5, pady=5, sticky="w")
+        ctk.CTkEntry(command_frame, textvariable=self.command_var,
+                     width=50).grid(row=0, column=1, padx=5, pady=5)
+
+        # Campo para el argumento
+        ctk.CTkLabel(command_frame, text="Argumento:").grid(
+            row=1, column=0, padx=5, pady=5, sticky="w")
+        ctk.CTkEntry(command_frame, textvariable=self.argument_var,
+                     width=50).grid(row=1, column=1, padx=5, pady=5)
+
+        # Botón Enviar
+        send_button = ctk.CTkButton(
+            command_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="darkgreen")
+        send_button.grid(row=2, column=0, columnspan=2, pady=10)
 
     def create_estado_frame(self, parent):
         """Frame para mostrar el estado del PLC"""
