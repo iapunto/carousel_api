@@ -1,7 +1,7 @@
 # CAROUSEL API
 
 [![CI/CD Pipeline for Carousel API](https://github.com/iapunto/carousel_api/actions/workflows/ci.yml/badge.svg)](https://github.com/iapunto/carousel_api/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/tu_usuario/carousel_api/badge.svg?branch=main)](https://coveralls.io/github/tu_usuario/carousel_api?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/iapunto/carousel_api/badge.svg?branch=main)](https://coveralls.io/github/iapunto/carousel_api?branch=main)
 [![PyPI version](https://badge.fury.io/py/carousel_api.svg)](https://badge.fury.io/py/carousel_api)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -22,7 +22,31 @@ Esta API permite enviar comandos a un PLC Delta AS Series para controlar el movi
 
 ## Instalación
 
-### Opción 1: Instalar desde PyPI
+### Opción 1: Instalar desde ejecutable para Windows
+
+#### Descargar el Ejecutable
+
+Puedes descargar la última versión del programa desde la sección **Releases**:
+
+- [Descargar Installer_VerticalPIC.exe](https://github.com/iapunto/carousel_api/releases)
+
+#### Ver Cambios y Versiones
+
+Todos los cambios y versiones están documentados en la pestaña **Commits** y **Tags**:
+
+- [Ver commits](https://github.com/iapunto/carousel_api/commits/main)
+- [Ver tags](https://github.com/iapunto/carousel_api/tags)
+
+#### Instrucciones
+
+1. Descarga el archivo `Installer_VerticalPIC.exe`.
+2. Ejecuta el instalador y sigue las instrucciones.
+3. Configura la IP y el Puerto del PLC e la pestaña de Configuración
+4. Configura el Puerto de la API en la pestaña de Configuración
+5. Prueba el Carousel enviando un comando y un argumento en la pestaña de Enviar Comandos
+6. Verifica los estados del Carousel en la pestaña Estados del PLC
+
+### Opción 2: Instalar desde PyPI
 
 Puedes instalar esta API directamente desde PyPI utilizando `pip`:
 
@@ -30,7 +54,7 @@ Puedes instalar esta API directamente desde PyPI utilizando `pip`:
 pip install carousel_api
 ```
 
-### Opción 2: Clonar desde Git
+### Opción 3: Clonar desde Git
 
 1. Clona este repositorio:
 
@@ -104,7 +128,7 @@ pip install carousel_api
 ## Autoría
 
 - **Autor:** Industrias Pico S.A.S
-- **Desarrollo y administración:** IA Punto: Soluciones Integrales de Tecnología y Marketing
+- **Desarrollo y administración:** IA Punto: Soluciones Tecnológicas
 - **Contacto:** <desarrollo@iapunto.com>
 
 ## Licencia
