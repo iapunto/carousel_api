@@ -15,6 +15,7 @@ import threading
 from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
+from controllers.command_handler import CommandHandler
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -52,6 +53,9 @@ class MainWindow:
             plc: Instancia de PLC (real o simulador)
             config: Diccionario con configuración (IP/puerto)
         """
+
+        self.command_handler = CommandHandler()
+
         self.root = root
         self.plc = plc
         self.config = config
@@ -117,6 +121,12 @@ class MainWindow:
 
     def send_test_command(self):
         """Envía un comando al PLC para pruebas"""
+
+        if not self.command_handler.can_send_command():
+            messagebox.showwarning(
+                "Bloqueado", "Espera 3 segundos antes de enviar otro comando.")
+            return
+
         try:
             # Obtener valores del formulario
             command = int(self.command_var.get())
@@ -137,6 +147,7 @@ class MainWindow:
             if self.plc.connect():
                 try:
                     self.plc.send_command(command, argument)
+                    self.command_handler.send_command(command, argument)
                     messagebox.showinfo(
                         "Éxito", f"Comando {command} enviado con argumento {argument}.")
                 except Exception as e:
@@ -262,6 +273,7 @@ class MainWindow:
     def update_status(self):
         """Actualiza el estado del PLC en la GUI."""
         try:
+            print("Solicitando estado actual del PLC...")  # Punto de control
             status_data = self.plc.get_current_status()
 
             if status_data["status_code"] is None or status_data["position"] is None:
@@ -271,27 +283,20 @@ class MainWindow:
             # Interpretar estado
             interpreted_status = interpretar_estado_plc(
                 status_data['status_code'])
+            # Punto de control
+            print(f"Estado interpretado: {interpreted_status}")
 
             # Actualizar etiquetas
             for key, label in self.status_labels.items():
                 value = interpreted_status.get(key, "Desconocido")
-                if value in ["OK", "Remoto", "Desactivada"]:
-                    label.configure(text=value, text_color="green")
-                elif value in ["Activa", "Manual", "Fallo"]:
-                    label.configure(text=value, text_color="red")
-                else:
-                    label.configure(text=value)
+                label.configure(text=value)
 
-            # Actualizar posición
-            self.position_label.configure(text=str(status_data['position']))
-
-            # Registrar mensaje
-            print(f"Estado actualizado: {interpreted_status}")
         except Exception as e:
             print(f"Error al actualizar estado: {str(e)}")
 
-        # Programar próxima actualización
-        self.root.after(60000, self.update_status)
+        finally:
+            # Programar próxima actualización
+            self.root.after(3000, self.update_status)
 
     def create_config_frame(self, parent):
         """Frame para configuración de IP, puerto y modo"""
