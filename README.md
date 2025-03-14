@@ -39,12 +39,12 @@ Todos los cambios y versiones están documentados en la pestaña **Commits** y *
 
 #### Instrucciones
 
-1. Descarga el archivo `Installer_VerticalPIC.exe`.
+1. Descarga el archivo [`Installer_VerticalPIC.exe`](https://github.com/iapunto/carousel_api/Installer_VerticalPIC.exe).
 2. Ejecuta el instalador y sigue las instrucciones.
-3. Configura la IP y el Puerto del PLC e la pestaña de Configuración
-4. Configura el Puerto de la API en la pestaña de Configuración
-5. Prueba el Carousel enviando un comando y un argumento en la pestaña de Enviar Comandos
-6. Verifica los estados del Carousel en la pestaña Estados del PLC
+3. Configura la IP y el Puerto del PLC e la pestaña de Configuración.
+4. Configura el Puerto de la API en la pestaña de Configuración.
+5. Prueba el Carousel enviando un comando y un argumento en la pestaña de Enviar Comandos.
+6. Verifica los estados del Carousel en la pestaña Estados del PLC.
 
 ### Opción 2: Instalar desde PyPI
 
