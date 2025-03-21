@@ -8,7 +8,7 @@ Uso de CustomTkinter para mejorar el aspecto visual.
 
 import os
 import sys
-import customtkinter as ctk  # Importar CustomTkinter [[1]]
+import customtkinter as ctk  # Importar CustomTkinter
 from tkinter import messagebox, simpledialog
 import json
 import threading
@@ -279,7 +279,7 @@ class MainWindow:
             if status_data["status_code"] is None or status_data["position"] is None:
                 print("No se recibió respuesta válida del PLC.")
                 return
-            
+
             # Registrar el stattus_code para depuración
             print(f"Código de estado recivido: {status_data['status_code']}")
 
