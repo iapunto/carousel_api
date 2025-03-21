@@ -279,6 +279,9 @@ class MainWindow:
             if status_data["status_code"] is None or status_data["position"] is None:
                 print("No se recibió respuesta válida del PLC.")
                 return
+            
+            # Registrar el stattus_code para depuración
+            print(f"Código de estado recivido: {status_data['status_code']}")
 
             # Interpretar estado
             interpreted_status = interpretar_estado_plc(

@@ -4,8 +4,8 @@ ESTADOS_PLC = {
     "READY": {
         "bit": 0,
         "descripcion": {
-            0: "El equipo no puede operar",
-            1: "El equipo está listo para operar"
+            0: "El equipo está listo para operar",
+            1: "El equipo no puede operar"
         }
     },
     "RUN": {

@@ -143,7 +143,7 @@ class PLC:
         try:
             self.connect()
             self.send_command(0)  # Comando STATUS
-            time.sleep(1)  # Espera para recibir la respuesta
+            time.sleep(2)  # Espera para recibir la respuesta
             response = self.receive_response()
             return response
         except Exception as e:
