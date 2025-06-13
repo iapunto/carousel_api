@@ -12,6 +12,7 @@ import threading
 from api import create_app  # Importa la API [[3]]
 from models.plc import PLC  # Importa PLC real
 from gui.main_gui import MainWindow  # Interfaz gráfica
+import logging
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
@@ -58,6 +59,14 @@ def create_plc_instance(config):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+        handlers=[
+            logging.FileHandler("carousel_api.log"),
+            logging.StreamHandler()
+        ]
+    )
     # Cargar configuración
     config = load_config()
 
