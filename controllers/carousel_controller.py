@@ -3,7 +3,7 @@ Controlador para el carrusel vertical de almacenamiento.
 
 Orquesta la comunicación entre la API y el PLC (real o simulado), interpretando estados y gestionando comandos de alto nivel.
 
-Autor: IA Punto: Soluciones Integrales de Tecnología y Marketing
+Autor: IA Punto: Soluciones Tecnológicas
 Proyecto para: INDUSTRIAS PICO S.A.S
 Fecha de creación: 2023-09-13
 Última modificación: 2024-09-27

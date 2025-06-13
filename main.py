@@ -13,6 +13,10 @@ from api import create_app  # Importa la API [[3]]
 from models.plc import PLC  # Importa PLC real
 from gui.main_gui import MainWindow  # Interfaz gráfica
 import logging
+import eventlet
+import eventlet.green.threading as threading
+from flask_socketio import SocketIO
+import copy
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
@@ -58,6 +62,26 @@ def create_plc_instance(config):
         return PLC(config["ip"], config["port"])
 
 
+def monitor_plc_status(socketio, plc, interval=1.0):
+    """
+    Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
+    Args:
+        socketio: Instancia de SocketIO.
+        plc: Instancia de PLC o simulador.
+        interval: Intervalo de consulta en segundos.
+    """
+    last_status = None
+    while True:
+        try:
+            status = plc.get_current_status()
+            if last_status is None or status != last_status:
+                socketio.emit('plc_status', status)
+                last_status = copy.deepcopy(status)
+        except Exception as e:
+            socketio.emit('plc_status_error', {'error': str(e)})
+        eventlet.sleep(interval)
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
@@ -75,15 +99,13 @@ if __name__ == "__main__":
 
     # Crear y configurar API Flask
     flask_app = create_app(plc)
+    socketio = SocketIO(flask_app, cors_allowed_origins="*",
+                        async_mode="eventlet")
 
-    # Iniciar API en hilo separado
-    api_thread = threading.Thread(
-        target=flask_app.run,
-        # Usa el puerto configurado o 5001 por defecto
-        kwargs={"host": "0.0.0.0", "port": config.get("api_port", 5000)},
-        daemon=True
-    )
-    api_thread.start()
+    # Iniciar hilo de monitoreo de PLC antes de socketio.run
+    eventlet.spawn_n(monitor_plc_status, socketio, plc, 1.0)
+    # Iniciar API y WebSocket en hilo principal
+    socketio.run(flask_app, host="0.0.0.0", port=config.get("api_port", 5000))
 
     # Iniciar interfaz gráfica
     root = tk.Tk()
