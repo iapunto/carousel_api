@@ -1,6 +1,8 @@
 """
 Simulador de PLC para desarrollo y pruebas.
 
+Emula el comportamiento de un PLC Delta AS Series para pruebas de la API y la interfaz gráfica, sin necesidad de hardware real.
+
 Autor: IA Punto: Soluciones Integrales de Tecnología y Marketing
 Proyecto para: INDUSTRIAS PICO S.A.S
 Fecha: 2024-09-27

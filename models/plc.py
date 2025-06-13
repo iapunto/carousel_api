@@ -1,6 +1,8 @@
 """
 Clase PLC para comunicación con PLC Delta AS Series vía sockets TCP/IP.
 
+Permite enviar comandos y recibir estados del PLC industrial, con manejo de reintentos y backoff exponencial.
+
 Autor: IA Punto: Soluciones Integrales de Tecnología y Marketing
 Proyecto para: INDUSTRIAS PICO S.A.S
 Fecha: 2024-09-27

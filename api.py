@@ -1,5 +1,8 @@
 """
-API para el control de un carrusel vertical a través de un PLC.
+API para el control de un carrusel vertical a través de un PLC (real o simulador).
+
+Permite consultar el estado y enviar comandos al sistema de almacenamiento automatizado.
+Incluye documentación Swagger y CORS para integración con sistemas externos.
 
 Autor: Industrias Pico S.A.S
 Desarrollo: IA Punto: Soluciones Integrales de Tecnología y Marketing
