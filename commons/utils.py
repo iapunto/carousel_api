@@ -87,8 +87,6 @@ def interpretar_estado_plc(status_code):
         estados_activos[estado] = detalles["descripcion"][valor_bit]
 
     return estados_activos
-<<<<<<< HEAD
-=======
 
 
 def determinar_bandera(estado, valor_bit):
@@ -144,4 +142,3 @@ def validar_argumento(argument):
         raise ValueError("El argumento debe ser un entero.")
     if not (0 <= argument <= 255):
         raise ValueError("Argumento fuera de rango (0-255)")
->>>>>>> ac18826 (refactor: Centralización de validaciones de comandos y argumentos en utilidades. Se elimina duplicidad y se refuerza la robustez en PLC, PLCSimulator y CarouselController. Validaciones de rango y tipo ahora en commons/utils.py. Refs #plan_accion, #refactorizacion)

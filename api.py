@@ -5,7 +5,7 @@ Permite consultar el estado y enviar comandos al sistema de almacenamiento autom
 Incluye documentación Swagger y CORS para integración con sistemas externos.
 
 Autor: Industrias Pico S.A.S
-Desarrollo: IA Punto: Soluciones Integrales de Tecnología y Marketing
+Desarrollo: IA Punto: Soluciones Tecnológicas
 Fecha: 2023-09-13
 Última modificación: 2025-03-13
 """
