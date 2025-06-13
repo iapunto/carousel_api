@@ -8,6 +8,7 @@ Fecha: 2024-09-27
 
 import random
 import time
+import logging
 
 
 class PLCSimulator:
@@ -30,6 +31,7 @@ class PLCSimulator:
         self.is_running = False  # Estado inicial: detenido
         self.status_code = 0
         self.sock = None  # Simulación de socket
+        self.logger = logging.getLogger(__name__)
 
     def connect(self) -> bool:
         """
@@ -38,7 +40,8 @@ class PLCSimulator:
         Returns:
             True si la conexión es exitosa.
         """
-        print("Simulando conexión con el PLC...")
+        self.logger.info(
+            f"Simulando conexión con el PLC en {self.ip}:{self.port}")
         self.sock = type('FakeSocket', (object,), {
             'sendall': self.simulated_sendall,
             '_buffer': b''  # Buffer interno para almacenar datos enviados
@@ -49,7 +52,7 @@ class PLCSimulator:
         """
         Simula el cierre de la conexión.
         """
-        print("Simulando cierre de conexión con el PLC...")
+        self.logger.info("Simulando cierre de conexión con el PLC...")
         self.sock = None
 
     def simulated_sendall(self, data: bytes):
@@ -75,46 +78,38 @@ class PLCSimulator:
         """
         if not (0 <= command <= 255):
             raise ValueError("Comando fuera de rango (0-255)")
-
-        if argument is not None and not (0 <= argument <= 9):
-            raise ValueError("Argumento fuera de rango (0-9)")
-
+        if argument is not None and not (0 <= argument <= 255):
+            raise ValueError("Argumento fuera de rango (0-255)")
         try:
-            print(
+            self.logger.info(
                 f"Comando recibido en el simulador: {command}, Argumento: {argument}")
             time.sleep(0.5)  # Simula latencia
-
             if command == 0:  # Comando STATUS
                 self.status_code = self.generate_status()
                 position = self.current_position
-                print(
+                self.logger.info(
                     f"Estado simulado: {self.status_code}, Posición: {position}")
                 return {'status_code': self.status_code, 'position': position}
-
             elif command == 1:  # Comando MUEVETE
                 if self.is_running:
-                    print("El carrusel ya está en movimiento. Ignorando el comando.")
+                    self.logger.warning(
+                        "El carrusel ya está en movimiento. Ignorando el comando.")
                     return {'error': 'PLC en movimiento'}
-
-                target_position = argument
+                target_position = argument if argument is not None else 0
                 self.is_running = True
                 self.status_code |= 0b00000010  # Enciende el bit RUN
-                print(
+                self.logger.info(
                     f"Moviendo el carrusel a la posición {target_position}...")
                 time.sleep(2)  # Simula tiempo de movimiento
                 self.current_position = target_position
                 self.is_running = False
                 self.status_code &= 0b11111101  # Apaga el bit RUN
-
                 return {'status_code': self.status_code, 'position': self.current_position}
-
             else:
-                # Para otros comandos, devuelve estado actual
                 self.status_code = self.generate_status()
                 return {'status_code': self.status_code, 'position': self.current_position}
-
         except Exception as e:
-            print(f"Error en simulador: {str(e)}")
+            self.logger.error(f"Error en simulador: {str(e)}")
             return {'error': str(e)}
 
     def generate_status(self) -> int:

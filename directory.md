@@ -1,3 +1,5 @@
+# Árbol de directorios
+
 C:\laragon\www\carousel_api
 ├── api.py
 ├── api_info.py
@@ -17,4 +19,3 @@ C:\laragon\www\carousel_api
 └── wsgi.py
 
 directory: 4 file: 12
-
