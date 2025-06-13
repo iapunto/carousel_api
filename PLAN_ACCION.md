@@ -6,31 +6,20 @@
 - [x] **Mejoras de robustez y unificación en comunicación PLC/simulador**
 - [x] **Eliminación de código muerto y métodos obsoletos**
 - [x] **Ampliación y corrección de pruebas unitarias e integración para la API**
+- [x] **Mejoras de documentación**
+- [x] **Refuerzo de seguridad y validaciones**
+- [x] **Refactorización y optimización de código**
+- [x] **Integración de WebSocket y actualización en tiempo real**
+  - El backend emite eventos solo ante cambios de estado del PLC usando Flask-SocketIO.
+  - La GUI recibe y actualiza el estado en tiempo real mediante websocket-client, sin refresco agresivo.
 
 ## Próximos pasos sugeridos
 
-- [ ] **Mejoras de documentación**
-  - Revisar y ampliar docstrings en módulos, clases y funciones clave.
-  - Actualizar y enriquecer el README.md con ejemplos de uso, despliegue y pruebas.
-  - Documentar el flujo de la API y los endpoints principales.
-
-- [ ] **Refuerzo de seguridad y validaciones**
-  - Revisar posibles vectores de ataque (inyección, DoS, etc.).
-  - Mejorar validaciones de entrada y manejo de errores.
-  - Revisar configuración de CORS y exponer solo lo necesario.
-
-- [ ] **Refactorización y optimización**
-  - Revisar duplicidades y oportunidades de modularización.
-  - Mejorar la separación de responsabilidades entre controladores, modelos y utilidades.
-  - Optimizar el rendimiento en operaciones críticas.
-
-- [ ] **Automatización y CI/CD**
-  - Añadir scripts de testing y despliegue automatizado.
-  - Integrar herramientas de análisis estático y cobertura de código.
+- [ ] **Optimización de experiencia de usuario** (indicadores visuales, reconexión, feedback avanzado)
+- [ ] **Monitoreo avanzado y logging centralizado**
+- [ ] **Integración con otros clientes (web, móvil) si se requiere**
 
 ---
 
-**Notas:**
-
-- Los puntos completados están marcados con ✓.
-- El siguiente paso recomendado es abordar la documentación y luego avanzar con seguridad/refactorización según prioridades del proyecto.
+**Estado actual:**
+El sistema cuenta con comunicación robusta, pruebas, documentación, seguridad, código optimizado y actualización de estados en tiempo real profesional.

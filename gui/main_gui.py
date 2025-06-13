@@ -95,6 +95,9 @@ class MainWindow:
         self.ws_thread = None
         self.ws = None
         self._stop_ws = False
+        self.ws_connected = False
+        self.connection_indicator = None
+        self.connection_label = None
         self.start_websocket_listener()
 
     def create_header(self):
@@ -121,6 +124,52 @@ class MainWindow:
         exit_button = ctk.CTkButton(
             header_frame, text="Salir", command=self.exit_app, fg_color="red", hover_color="darkred", width=80)
         exit_button.pack(side="right", padx=30)
+
+        self.create_connection_indicator()
+
+    def create_connection_indicator(self):
+        """
+        Crea un indicador visual de conexión WebSocket en la cabecera.
+        """
+        if not hasattr(self, 'root') or not hasattr(self, 'connection_indicator'):
+            return
+        # Buscar el header_frame
+        for widget in self.root.winfo_children():
+            if isinstance(widget, ctk.CTkFrame):
+                header_frame = widget
+                break
+        else:
+            return
+        # Indicador (círculo)
+        self.connection_indicator = ctk.CTkCanvas(
+            header_frame, width=18, height=18, bg="white", highlightthickness=0)
+        self.connection_indicator.place(x=10, y=10)
+        self._draw_connection_circle("red")
+        # Etiqueta
+        self.connection_label = ctk.CTkLabel(
+            header_frame, text="Desconectado", text_color="red", font=("Arial", 10, "bold"), bg_color="white")
+        self.connection_label.place(x=32, y=8)
+
+    def _draw_connection_circle(self, color):
+        if self.connection_indicator:
+            self.connection_indicator.delete("all")
+            self.connection_indicator.create_oval(
+                2, 2, 16, 16, fill=color, outline=color)
+
+    def set_ws_status(self, connected):
+        """
+        Actualiza el indicador visual y la etiqueta de conexión.
+        """
+        if connected:
+            self._draw_connection_circle("green")
+            if self.connection_label:
+                self.connection_label.configure(
+                    text="Conectado", text_color="green")
+        else:
+            self._draw_connection_circle("red")
+            if self.connection_label:
+                self.connection_label.configure(
+                    text="Desconectado", text_color="red")
 
     def send_test_command(self):
         """Envía un comando al PLC para pruebas"""
@@ -382,6 +431,21 @@ class MainWindow:
         """
         Inicia un hilo que escucha el WebSocket del backend y actualiza la GUI en tiempo real.
         """
+        def on_open(ws):
+            print("WebSocket conectado")
+            self.root.after(0, self.set_ws_status, True)
+
+        def on_close(ws, close_status_code, close_msg):
+            print("WebSocket cerrado")
+            self.root.after(0, self.set_ws_status, False)
+            self.root.after(0, self.show_ws_error,
+                            "Conexión WebSocket perdida")
+
+        def on_error(ws, error):
+            print(f"WebSocket error: {error}")
+            self.root.after(0, self.set_ws_status, False)
+            self.root.after(0, self.show_ws_error, f"Error WebSocket: {error}")
+
         def on_message(ws, message):
             try:
                 data = jsonlib.loads(message)
@@ -390,18 +454,13 @@ class MainWindow:
             except Exception as e:
                 print(f"Error procesando mensaje WebSocket: {e}")
 
-        def on_error(ws, error):
-            print(f"WebSocket error: {error}")
-
-        def on_close(ws, close_status_code, close_msg):
-            print("WebSocket cerrado")
-
         def run_ws():
             while not self._stop_ws:
                 try:
                     ws_url = f"ws://localhost:5000/socket.io/?EIO=4&transport=websocket"
                     self.ws = websocket.WebSocketApp(
                         ws_url,
+                        on_open=on_open,
                         on_message=on_message,
                         on_error=on_error,
                         on_close=on_close
@@ -411,8 +470,7 @@ class MainWindow:
                     print(f"Fallo conexión WebSocket: {e}")
                 if not self._stop_ws:
                     import time
-                    time.sleep(5)  # Reintento tras error
-
+                    time.sleep(5)
         import threading
         self.ws_thread = threading.Thread(target=run_ws, daemon=True)
         self.ws_thread.start()
@@ -432,6 +490,12 @@ class MainWindow:
                 label.configure(text=value)
         self.position_label.configure(text=str(status_data['position']))
         print(f"Estado actualizado (WebSocket): {interpreted_status}")
+
+    def show_ws_error(self, msg):
+        """
+        Muestra una notificación visual de error de conexión WebSocket.
+        """
+        messagebox.showwarning("WebSocket", msg)
 
     def close(self):
         self._stop_ws = True
