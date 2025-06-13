@@ -11,7 +11,7 @@ Fecha de creación: 2023-09-13
 
 from models.plc import PLC  # Importación explícita del PLC real [[2]]
 # Interpretación de estados [[3]]
-from commons.utils import interpretar_estado_plc
+from commons.utils import interpretar_estado_plc, validar_comando, validar_argumento
 import time
 import logging
 
@@ -46,12 +46,9 @@ class CarouselController:
             ValueError: Parámetros inválidos
             RuntimeError: Error de comunicación
         """
-        if not (0 <= command <= 255):
-            raise ValueError("Comando fuera de rango (0-255)")
-
-        if argument is not None and not (0 <= argument <= 255):
-            raise ValueError("Argumento fuera de rango (0-255)")
-
+        validar_comando(command)
+        if argument is not None:
+            validar_argumento(argument)
         try:
             with self.plc:  # Gestión automática de conexión [[2]]
                 self.plc.send_command(command, argument)

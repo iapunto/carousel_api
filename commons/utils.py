@@ -113,3 +113,31 @@ def determinar_bandera(estado, valor_bit):
         return "Fallo" if valor_bit == 1 else "OK"
     elif estado == "ERROR_POSICIONAMIENTO":
         return "Fallo" if valor_bit == 1 else "OK"
+
+
+def validar_comando(command):
+    """
+    Valida que el comando sea un entero entre 0 y 255.
+    Args:
+        command (int): Comando a validar.
+    Raises:
+        ValueError: Si el comando no es entero o está fuera de rango.
+    """
+    if not isinstance(command, int):
+        raise ValueError("El comando debe ser un entero.")
+    if not (0 <= command <= 255):
+        raise ValueError("Comando fuera de rango (0-255)")
+
+
+def validar_argumento(argument):
+    """
+    Valida que el argumento sea un entero entre 0 y 255.
+    Args:
+        argument (int): Argumento a validar.
+    Raises:
+        ValueError: Si el argumento no es entero o está fuera de rango.
+    """
+    if not isinstance(argument, int):
+        raise ValueError("El argumento debe ser un entero.")
+    if not (0 <= argument <= 255):
+        raise ValueError("Argumento fuera de rango (0-255)")
