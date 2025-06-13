@@ -1,5 +1,11 @@
 # utils.py
 
+"""
+Funciones utilitarias para interpretación de estados del PLC.
+
+Incluye mapeo de bits a estados legibles y utilidades para el procesamiento de códigos de estado.
+"""
+
 ESTADOS_PLC = {
     "READY": {
         "bit": 0,

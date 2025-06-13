@@ -1,136 +1,144 @@
-# CAROUSEL API
+# carousel_api
 
-[![CI/CD Pipeline for Carousel API](https://github.com/iapunto/carousel_api/actions/workflows/ci.yml/badge.svg)](https://github.com/iapunto/carousel_api/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/iapunto/carousel_api/badge.svg?branch=main)](https://coveralls.io/github/iapunto/carousel_api?branch=main)
-[![PyPI version](https://badge.fury.io/py/carousel_api.svg)](https://badge.fury.io/py/carousel_api)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+API y sistema de control para carrusel vertical industrial (PLC Delta AS Series)
 
-API de Python para el control de un carrusel vertical a través de una conexión de sockets TCP/IP.
+---
 
-## Descripción
+## Descripción general
 
-Esta API permite enviar comandos a un PLC Delta AS Series para controlar el movimiento de un carrusel vertical de almacenamiento y recibir información sobre su estado y posición actual.
+Este proyecto proporciona una API REST y una interfaz gráfica para controlar un sistema de almacenamiento automatizado tipo carrusel, integrando hardware industrial (PLC Delta AS Series) o un simulador para pruebas y desarrollo.
 
-## Características
+- **API REST**: Permite consultar el estado y enviar comandos al carrusel.
+- **Simulador**: Emula el comportamiento del PLC para desarrollo sin hardware.
+- **Interfaz gráfica**: Permite operación manual y monitoreo.
 
-- Comunicación con el PLC a través de sockets TCP/IP.
-- Envío y recepción de comandos y respuestas en formato de bytes.
-- Verificación del estado del PLC antes de enviar comandos de movimiento.
-- Interpretación de los estados del PLC en formato binario.
-- Lectura de la posición actual del carrusel.
-- Incluye un simulador del PLC para pruebas y desarrollo sin necesidad de hardware.
+## Arquitectura
 
-## Instalación
+- `api.py`: API Flask con endpoints REST.
+- `models/plc.py`: Comunicación con PLC real (TCP/IP).
+- `models/plc_simulator.py`: Simulador de PLC.
+- `controllers/carousel_controller.py`: Lógica de alto nivel y validaciones.
+- `commons/utils.py`: Utilidades para interpretación de estados.
+- `main.py`: Lanzador de la aplicación (API + GUI).
 
-### Opción 1: Instalar desde ejecutable para Windows
+## Instalación y configuración
 
-#### Descargar el Ejecutable
-
-Puedes descargar la última versión del programa desde la sección **Releases**:
-
-- [Descargar Installer_VerticalPIC.exe](https://github.com/iapunto/carousel_api/releases)
-
-#### Ver Cambios y Versiones
-
-Todos los cambios y versiones están documentados en la pestaña **Commits** y **Tags**:
-
-- [Ver commits](https://github.com/iapunto/carousel_api/commits/main)
-- [Ver tags](https://github.com/iapunto/carousel_api/tags)
-
-#### Instrucciones
-
-1. Descarga el archivo [`Installer_VerticalPIC.exe`](https://github.com/iapunto/carousel_api/Installer_VerticalPIC.exe).
-2. Ejecuta el instalador y sigue las instrucciones.
-3. Configura la IP y el Puerto del PLC e la pestaña de Configuración.
-4. Configura el Puerto de la API en la pestaña de Configuración.
-5. Prueba el Carousel enviando un comando y un argumento en la pestaña de Enviar Comandos.
-6. Verifica los estados del Carousel en la pestaña Estados del PLC.
-
-### Opción 2: Instalar desde PyPI
-
-Puedes instalar esta API directamente desde PyPI utilizando `pip`:
+1. **Clonar el repositorio**
 
 ```bash
-pip install carousel_api
+git clone <url-del-repo>
+cd carousel_api
 ```
 
-### Opción 3: Clonar desde Git
+2. **Crear y activar entorno virtual**
 
-1. Clona este repositorio:
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate   # Windows
+```
 
-   ```bash
-   git clone https://gihub.com/iapunto/carousel_api.git
-   ```
+3. **Instalar dependencias**
 
-2. Crea un entorno virtual:
+```bash
+pip install -r requirements.txt
+```
 
-   ```bash
-   python -m venv venv
-   ```
+4. **Configurar parámetros**
 
-3. Activa el entorno virtual:
+Editar `config.json`:
 
-   - Windows: `venv\Scripts\activate`
-   - macOS/Linux: `source venv/bin/activate`
+```json
+{
+  "ip": "192.168.1.100",
+  "port": 3200,
+  "simulator_enabled": false,
+  "api_port": 5000
+}
+```
+- `simulator_enabled: true` activa el modo simulador.
+- `api_port`: Puerto donde se expone la API.
 
-4. Instala las dependencias:
+## Ejecución
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+python main.py
+```
+Esto inicia la API y la interfaz gráfica.
 
-## Configuración
+## Uso de la API
 
-- Crea un archivo `.env` en la raíz del proyecto que utilizará la API con la siguiente información:
+### Consultar estado
 
-  ```bash
-  PLC_IP=192.168.1.100  # Reemplaza con la IP real de tu PLC
-  PLC_PORT=2000         # Reemplaza con el puerto real del PLC
-  MODE=plc              # O 'simulator' para usar el simulador
-  ```
+**GET** `/v1/status`
 
-## Uso
+- **Respuesta exitosa:**
+```json
+{
+  "status_code": 3,
+  "position": 5
+}
+```
+- **Error:**
+```json
+{
+  "error": "No se pudo conectar al PLC"
+}
+```
 
-1. **Importar la API en tu proyecto Python:**
+### Enviar comando
 
-   ```python
-   from carousel_api.api import app
+**POST** `/v1/command`
 
-   # Configurar la aplicación Flask de la API con los valores del .env
-   app.config['PLC_IP'] = os.getenv('PLC_IP')
-   app.config['PLC_PORT'] = int(os.getenv('PLC_PORT'))
-   app.config['MODE'] = os.getenv('MODE')
-   ```
+- **Payload:**
+```json
+{
+  "command": 1,
+  "argument": 3
+}
+```
+- **Respuesta exitosa:**
+```json
+{
+  "status": {
+    "READY": "El equipo está listo para operar",
+    "RUN": "El equipo está detenido",
+    ...
+  },
+  "position": 3,
+  "raw_status": 3
+}
+```
+- **Error:**
+```json
+{
+  "error": "Comando fuera de rango (0-255)"
+}
+```
 
-2. **Ejecutar la API:**
+## Pruebas automatizadas
 
-   ```bash
-   python wsgi.py  # O el comando que uses para ejecutar tu servidor WSGI (Waitress, etc.)
-   ```
+```bash
+python -m unittest discover -s tests
+```
 
-3. **Enviar comandos al PLC:**
+## Modos de operación
 
-   - Utiliza una biblioteca HTTP en tu lenguaje de programación preferido para enviar solicitudes POST al endpoint `/v1/command` con los siguientes datos en formato JSON:
+- **PLC real:** `simulator_enabled: false` en `config.json`.
+- **Simulador:** `simulator_enabled: true` (requiere contraseña en GUI: `DESARROLLO123`).
 
-     ```json
-     {
-         "command": <número_de_comando>,
-         "argument": <argumento_opcional>
-     }
-     ```
+## Seguridad y buenas prácticas
 
-   - Consulta la documentación de la API para obtener detalles sobre los comandos disponibles y sus argumentos.
+- No exponer la API a redes públicas sin protección.
+- Revisar y ajustar CORS según el entorno.
+- No almacenar credenciales sensibles en archivos de texto plano.
+- Validar siempre los datos de entrada.
 
-4. **Obtener el estado del PLC:**
+## Créditos
 
-   - Envía una solicitud GET al endpoint `/v1/status` para obtener el estado y la posición actual del PLC.
+- Industrias Pico S.A.S
+- IA Punto: Soluciones Integrales de Tecnología y Marketing
 
-## Autoría
+---
 
-- **Autor:** Industrias Pico S.A.S
-- **Desarrollo y administración:** IA Punto: Soluciones Tecnológicas
-- **Contacto:** <desarrollo@iapunto.com>
-
-## Licencia
-
-Este proyecto está licenciado bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+Para dudas o soporte, contactar a los responsables del proyecto.
