@@ -175,3 +175,22 @@ class PLCSimulator:
         self.status_code &= 0b11111101  # Apaga el bit RUN
 
         return {'status_code': self.status_code, 'position': self.current_position}
+
+    def receive_response(self) -> dict:
+        """
+        Simula la recepción de una respuesta del PLC (status y posición).
+        """
+        # Simplemente devuelve el estado y posición actuales
+        return {
+            'status_code': self.status_code,
+            'position': self.current_position
+        }
+
+    def __enter__(self):
+        """Permite uso con 'with' para gestión automática de recursos en el simulador"""
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Cierra la conexión simulada al salir del bloque 'with'"""
+        self.close()

@@ -4,3 +4,4 @@ flasgger==0.9.7.1
 customtkinter==5.2.2
 pystray==0.19.5
 pillow==11.1.0
+Werkzeug==2.3.7
