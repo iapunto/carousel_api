@@ -10,12 +10,13 @@ Fecha: 2023-09-13
 Última modificación: 2025-03-13
 """
 
+import os
 import logging
-from commons.utils import interpretar_estado_plc
-from models.plc import PLC  # Importación explícita del PLC real [[2]]
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort
 from flasgger import Swagger
 from flask_cors import CORS
+from commons.utils import interpretar_estado_plc
+from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from controllers.carousel_controller import CarouselController
 import time
 
@@ -23,14 +24,20 @@ import time
 def create_app(plc):
     """
     Crea la instancia de la aplicación Flask.
+    Incluye configuración de CORS segura, logging y manejo global de errores.
     Args:
         plc: Instancia del PLC (real o simulador) [[6]]
     """
     app = Flask(__name__)
 
-    # Configuración de CORS para permitir acceso desde WMS externo [[8]]
-    app.config['CORS_HEADERS'] = 'Content-Type'
-    cors = CORS(app, resources={r"/*": {"origins": "*"}})
+    # Limitar tamaño máximo de payload (prevención DoS)
+    app.config['MAX_CONTENT_LENGTH'] = 2 * 1024  # 2 KB
+
+    # Configuración de CORS segura
+    allowed_origins = os.getenv(
+        "API_ALLOWED_ORIGINS", "http://localhost, http://127.0.0.1, http://192.168.1.0/24").split(",")
+    allowed_origins = [o.strip() for o in allowed_origins]
+    CORS(app, resources={r"/*": {"origins": allowed_origins}})
 
     # Configuración de Swagger [[5]]
     app.config['SWAGGER'] = {
@@ -42,6 +49,18 @@ def create_app(plc):
 
     # Inicializar controlador
     carousel_controller = CarouselController(plc)
+
+    # Logging de errores
+    logger = logging.getLogger("api")
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        logger.exception(f"Error no controlado: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+    @app.errorhandler(413)
+    def handle_large_request(e):
+        return jsonify({'error': 'Payload demasiado grande'}), 413
 
     @app.route('/v1/status', methods=['GET'])
     def get_status():
@@ -74,6 +93,7 @@ def create_app(plc):
                 response = plc.receive_response()
                 return jsonify(response), 200
             except Exception as e:
+                logger.error(f"Error en /v1/status: {str(e)}")
                 return jsonify({'error': f'Error: {str(e)}'}), 500
             finally:
                 plc.close()
@@ -112,23 +132,29 @@ def create_app(plc):
             return jsonify({'error': 'Solicitud debe ser JSON'}), 400
 
         data = request.get_json()
+        # Validación estricta de tipos y rangos
         command = data.get('command')
         argument = data.get('argument')
 
         if command is None:
             return jsonify({'error': 'Comando no especificado'}), 400
-
+        if not isinstance(command, int):
+            return jsonify({'error': 'El comando debe ser un entero'}), 400
         if not (0 <= command <= 255):
             return jsonify({'error': 'Comando fuera de rango (0-255)'}), 400
 
-        if argument is not None and not (0 <= argument <= 255):
-            return jsonify({'error': 'Argumento inválido (0-255)'}), 400
+        if argument is not None:
+            if not isinstance(argument, int):
+                return jsonify({'error': 'El argumento debe ser un entero'}), 400
+            if not (0 <= argument <= 255):
+                return jsonify({'error': 'Argumento inválido (0-255)'}), 400
 
         if plc.connect():
             try:
                 carousel_controller.send_command(command, argument)
                 return jsonify({'status': 'Comando enviado'}), 200
             except Exception as e:
+                logger.error(f"Error en /v1/command: {str(e)}")
                 return jsonify({'error': f'Error PLC: {str(e)}'}), 500
             finally:
                 plc.close()
