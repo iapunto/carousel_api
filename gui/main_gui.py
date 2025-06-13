@@ -15,6 +15,8 @@ import threading
 from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
+import websocket
+import json as jsonlib
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -89,6 +91,11 @@ class MainWindow:
         # Configurar minimización al área de notificaciones
         self.tray_icon = None
         self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+
+        self.ws_thread = None
+        self.ws = None
+        self._stop_ws = False
+        self.start_websocket_listener()
 
     def create_header(self):
         """Crea la cabecera con el logo y el botón de salir."""
@@ -370,3 +377,65 @@ class MainWindow:
         self.config["simulator_enabled"] = self.dev_mode_var.get()
         with open(CONFIG_FILE, 'w') as f:
             json.dump(self.config, f)
+
+    def start_websocket_listener(self):
+        """
+        Inicia un hilo que escucha el WebSocket del backend y actualiza la GUI en tiempo real.
+        """
+        def on_message(ws, message):
+            try:
+                data = jsonlib.loads(message)
+                if 'status_code' in data and 'position' in data:
+                    self.root.after(0, self.update_status_from_ws, data)
+            except Exception as e:
+                print(f"Error procesando mensaje WebSocket: {e}")
+
+        def on_error(ws, error):
+            print(f"WebSocket error: {error}")
+
+        def on_close(ws, close_status_code, close_msg):
+            print("WebSocket cerrado")
+
+        def run_ws():
+            while not self._stop_ws:
+                try:
+                    ws_url = f"ws://localhost:5000/socket.io/?EIO=4&transport=websocket"
+                    self.ws = websocket.WebSocketApp(
+                        ws_url,
+                        on_message=on_message,
+                        on_error=on_error,
+                        on_close=on_close
+                    )
+                    self.ws.run_forever()
+                except Exception as e:
+                    print(f"Fallo conexión WebSocket: {e}")
+                if not self._stop_ws:
+                    import time
+                    time.sleep(5)  # Reintento tras error
+
+        import threading
+        self.ws_thread = threading.Thread(target=run_ws, daemon=True)
+        self.ws_thread.start()
+
+    def update_status_from_ws(self, status_data):
+        """
+        Actualiza la GUI con datos recibidos por WebSocket.
+        """
+        interpreted_status = interpretar_estado_plc(status_data['status_code'])
+        for key, label in self.status_labels.items():
+            value = interpreted_status.get(key, "Desconocido")
+            if value in ["OK", "Remoto", "Desactivada"]:
+                label.configure(text=value, text_color="green")
+            elif value in ["Activa", "Manual", "Fallo"]:
+                label.configure(text=value, text_color="red")
+            else:
+                label.configure(text=value)
+        self.position_label.configure(text=str(status_data['position']))
+        print(f"Estado actualizado (WebSocket): {interpreted_status}")
+
+    def close(self):
+        self._stop_ws = True
+        if self.ws:
+            self.ws.close()
+        if self.ws_thread:
+            self.ws_thread.join(timeout=2)

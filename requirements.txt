@@ -7,3 +7,4 @@ pillow==11.1.0
 Werkzeug==2.3.7
 flask-socketio==5.5.1
 eventlet==0.40.0
+websocket-client==1.8.0
