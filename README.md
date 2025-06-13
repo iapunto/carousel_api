@@ -110,7 +110,7 @@ Configura `config.json` según tu entorno (ver ejemplo en el archivo).
 
 ## 👨‍🏭 Créditos y soporte
 
-- Desarrollado por **Industrias Pico S.A.S** y **IA Punto**.
+- Desarrollado por **IA Punto Soluciones Tecnológicas** para **Industrias Pico S A S**.
 - Para soporte, sugerencias o incidencias, abre un issue o contacta a los responsables del proyecto.
 
 ---
