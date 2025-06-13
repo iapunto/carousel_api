@@ -140,19 +140,3 @@ class PLC:
                         time.sleep(backoff)
                         continue
                 raise RuntimeError(f"Error recibiendo datos: {str(e)}")
-
-    def get_current_status(self):
-        """
-        Obtiene el estado actual del PLC.
-        Returns:
-            dict: Estado del PLC con 'status_code' y 'position'.
-        """
-        try:
-            self.connect()
-            self.send_command(0)  # Comando STATUS
-            time.sleep(1)  # Espera para recibir la respuesta
-            response = self.receive_response()
-            return response
-        except Exception as e:
-            self.logger.error(f"Error al obtener el estado del PLC: {e}")
-            return {"status_code": None, "position": None}
