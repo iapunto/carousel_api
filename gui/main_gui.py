@@ -16,6 +16,7 @@ from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
 from controllers.command_handler import CommandHandler
+import time
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -274,7 +275,11 @@ class MainWindow:
         """Actualiza el estado del PLC en la GUI."""
         try:
             print("Solicitando estado actual del PLC...")  # Punto de control
-            status_data = self.plc.get_current_status()
+            # Reemplazo de get_current_status:
+            self.plc.connect()
+            self.plc.send_command(0)  # Comando STATUS
+            time.sleep(2)  # Espera para recibir la respuesta
+            status_data = self.plc.receive_response()
 
             if status_data["status_code"] is None or status_data["position"] is None:
                 print("No se recibió respuesta válida del PLC.")
