@@ -56,6 +56,7 @@ Editar `config.json`:
   "api_port": 5000
 }
 ```
+
 - `simulator_enabled: true` activa el modo simulador.
 - `api_port`: Puerto donde se expone la API.
 
@@ -64,6 +65,7 @@ Editar `config.json`:
 ```bash
 python main.py
 ```
+
 Esto inicia la API y la interfaz gráfica.
 
 ## Uso de la API
@@ -73,13 +75,16 @@ Esto inicia la API y la interfaz gráfica.
 **GET** `/v1/status`
 
 - **Respuesta exitosa:**
+
 ```json
 {
   "status_code": 3,
   "position": 5
 }
 ```
+
 - **Error:**
+
 ```json
 {
   "error": "No se pudo conectar al PLC"
@@ -91,13 +96,16 @@ Esto inicia la API y la interfaz gráfica.
 **POST** `/v1/command`
 
 - **Payload:**
+
 ```json
 {
   "command": 1,
   "argument": 3
 }
 ```
+
 - **Respuesta exitosa:**
+
 ```json
 {
   "status": {
@@ -109,7 +117,9 @@ Esto inicia la API y la interfaz gráfica.
   "raw_status": 3
 }
 ```
+
 - **Error:**
+
 ```json
 {
   "error": "Comando fuera de rango (0-255)"
