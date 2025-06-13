@@ -19,12 +19,9 @@ import threading
 from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
-<< << << < HEAD
-== == == =
->>>>>> > e4b69a6(feat: Integración de cliente WebSocket en la GUI. La interfaz ahora recibe y actualiza el estado del PLC en tiempo real desde el backend usando websocket-client. Fallback de actualización manual conservado. Refs  # plan_accion, #realtime)
 
-CONFIG_FILE="config.json"
-DEFAULT_CONFIG={
+CONFIG_FILE = "config.json"
+DEFAULT_CONFIG = {
     "ip": "192.168.1.100",
     "port": 3200,
     "simulator_enabled": False
@@ -41,9 +38,9 @@ def resource_path(relative_path):
         """
     try:
         # PyInstaller crea una carpeta temporal y almacena los recursos allí
-        base_path=sys._MEIPASS
+        base_path = sys._MEIPASS
     except Exception:
-        base_path=os.path.abspath(".")
+        base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
 
@@ -60,14 +57,14 @@ class MainWindow:
             config: Diccionario con configuración (IP/puerto)
         """
 
-        self.command_handler=CommandHandler()
+        self.command_handler = CommandHandler()
 
-        self.root=root
-        self.plc=plc
-        self.config=config
+        self.root = root
+        self.plc = plc
+        self.config = config
         self.root.title("Vertical PIC - Control de Carrusel")
         # Configurar el ícono
-        icon_path=resource_path("assets/favicon.ico")
+        icon_path = resource_path("assets/favicon.ico")
         if os.path.exists(icon_path):
             self.root.iconbitmap(icon_path)
         else:
@@ -76,16 +73,14 @@ class MainWindow:
         self.root.geometry("400x500")
 
         # Variables de control
-        self.ip_var=ctk.StringVar(value=config["ip"])
-        self.port_var=ctk.StringVar(value=str(config["port"]))
-        self.dev_mode_var=ctk.BooleanVar(value=config.get(
+        self.ip_var = ctk.StringVar(value=config["ip"])
+        self.port_var = ctk.StringVar(value=str(config["port"]))
+        self.dev_mode_var = ctk.BooleanVar(value=config.get(
             "simulator_enabled", False))  # Estado del modo desarrollo
 
         # Variables de control
-        # Valor predeterminado para el comando
-        self.command_var=ctk.StringVar(value="1")
-        # Valor predeterminado para el argumento
-        self.argument_var=ctk.StringVar(value="3")
+        self.command_var = ctk.StringVar(value="1")
+        self.argument_var = ctk.StringVar(value="3")
 
         # Crear el header
         self.create_header()
@@ -93,42 +88,90 @@ class MainWindow:
         # Crear pestañas
         self.create_tabs()
 
-        # Iniciar monitoreo en segundo plano
-        self.update_status()
+        # WebSocket y visual indicator
+        self.ws_thread = None
+        self.ws = None
+        self._stop_ws = False
+        self.ws_connected = False
+        self.connection_indicator = None
+        self.connection_label = None
+        self.start_websocket_listener()
 
         # Configurar minimización al área de notificaciones
-        self.tray_icon=None
+        self.tray_icon = None
         self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
-
-        self.ws_thread=None
-        self.ws=None
-        self._stop_ws=False
-        self.start_websocket_listener()
 
     def create_header(self):
         """Crea la cabecera con el logo y el botón de salir."""
-        header_frame=ctk.CTkFrame(
+        header_frame = ctk.CTkFrame(
             self.root, height=180, bg_color="white", corner_radius=0)
         header_frame.pack(fill="x", side="top")
 
         # Cargar el logo
-        logo_path=resource_path("assets/logo.png")
+        logo_path = resource_path("assets/logo.png")
         if os.path.exists(logo_path):
-            logo_image=Image.open(logo_path)
-            logo_image=logo_image.resize(
+            logo_image = Image.open(logo_path)
+            logo_image = logo_image.resize(
                 (90, 40), Image.LANCZOS)  # Redimensionar el logo
-            logo_tk=ImageTk.PhotoImage(logo_image)
-            logo_label=ctk.CTkLabel(
+            logo_tk = ImageTk.PhotoImage(logo_image)
+            logo_label = ctk.CTkLabel(
                 header_frame, image=logo_tk, text="")
-            logo_label.image=logo_tk  # Mantener una referencia para evitar que se elimine
+            logo_label.image = logo_tk  # Mantener una referencia para evitar que se elimine
             logo_label.pack(side="left", padx=30, pady=10)
         else:
             print(f"No se encontró el archivo de logo: {logo_path}")
 
         # Botón de salir
-        exit_button=ctk.CTkButton(
+        exit_button = ctk.CTkButton(
             header_frame, text="Salir", command=self.exit_app, fg_color="red", hover_color="darkred", width=80)
         exit_button.pack(side="right", padx=30)
+
+        self.create_connection_indicator()
+
+    def create_connection_indicator(self):
+        """
+        Crea un indicador visual de conexión WebSocket en la cabecera.
+        """
+        if not hasattr(self, 'root') or not hasattr(self, 'connection_indicator'):
+            return
+        # Buscar el header_frame
+        for widget in self.root.winfo_children():
+            if isinstance(widget, ctk.CTkFrame):
+                header_frame = widget
+                break
+        else:
+            return
+        # Indicador (círculo)
+        self.connection_indicator = ctk.CTkCanvas(
+            header_frame, width=18, height=18, bg="white", highlightthickness=0)
+        self.connection_indicator.place(x=10, y=10)
+        self._draw_connection_circle("red")
+        # Etiqueta
+        self.connection_label = ctk.CTkLabel(
+            header_frame, text="Desconectado", text_color="red", font=("Arial", 10, "bold"), bg_color="white")
+        self.connection_label.place(x=32, y=8)
+
+    def _draw_connection_circle(self, color):
+        if self.connection_indicator:
+            self.connection_indicator.delete("all")
+            self.connection_indicator.create_oval(
+                2, 2, 16, 16, fill=color, outline=color)
+
+    def set_ws_status(self, connected):
+        """
+        Actualiza el indicador visual y la etiqueta de conexión.
+        """
+        self.ws_connected = connected
+        if connected:
+            self._draw_connection_circle("green")
+            if self.connection_label:
+                self.connection_label.configure(
+                    text="Conectado", text_color="green")
+        else:
+            self._draw_connection_circle("red")
+            if self.connection_label:
+                self.connection_label.configure(
+                    text="Desconectado", text_color="red")
 
     def send_test_command(self):
         """Envía un comando al PLC para pruebas"""
@@ -140,8 +183,8 @@ class MainWindow:
 
         try:
             # Obtener valores del formulario
-            command=int(self.command_var.get())
-            argument=int(self.argument_var.get())
+            command = int(self.command_var.get())
+            argument = int(self.argument_var.get())
 
             # Validar los valores
             if not (0 <= command <= 255):
@@ -174,7 +217,7 @@ class MainWindow:
 
     def create_exit_button(self):
         """Crea un botón de salida en la interfaz"""
-        exit_button=ctk.CTkButton(
+        exit_button = ctk.CTkButton(
             self.root, text="Salir", command=self.exit_app, fg_color="red", hover_color="darkred")
         exit_button.pack(side="bottom", pady=10)
 
@@ -184,13 +227,13 @@ class MainWindow:
 
         # Crear un ícono para la bandeja del sistema
         # Reemplaza "icon.png" con tu ícono
-        image=resource_path("assets/favicon.ico")
-        icon=Image.open(image)
-        menu=pystray.Menu(
+        image = resource_path("assets/favicon.ico")
+        icon = Image.open(image)
+        menu = pystray.Menu(
             pystray.MenuItem('Restaurar', self.restore_window),
             pystray.MenuItem('Salir', self.exit_app)
         )
-        self.tray_icon=pystray.Icon(
+        self.tray_icon = pystray.Icon(
             "favicon", icon, "Vertical PIC", menu)
         self.tray_icon.run()
 
@@ -208,24 +251,24 @@ class MainWindow:
 
     def create_tabs(self):
         """Crea las pestañas para la interfaz"""
-        tab_view=ctk.CTkTabview(self.root, width=780, height=500)
+        tab_view = ctk.CTkTabview(self.root, width=780, height=500)
         tab_view.pack(padx=10, pady=10)
 
         # Pestaña 1: Estado del PLC
-        tab_estado=tab_view.add("Estado del PLC")
+        tab_estado = tab_view.add("Estado del PLC")
         self.create_estado_frame(tab_estado)
 
         # Pestaña 2: Enviar Comandos
-        tab_comandos=tab_view.add("Enviar Comandos")
+        tab_comandos = tab_view.add("Enviar Comandos")
         self.create_command_frame(tab_comandos)
 
         # Pestaña 3: Configuración
-        tab_config=tab_view.add("Configuración")
+        tab_config = tab_view.add("Configuración")
         self.create_config_frame(tab_config)
 
     def create_command_frame(self, parent):
         """Crea la pestaña para enviar comandos al PLC."""
-        command_frame=ctk.CTkFrame(parent, corner_radius=10)
+        command_frame = ctk.CTkFrame(parent, corner_radius=10)
         command_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
         # Campo para el comando
@@ -241,42 +284,42 @@ class MainWindow:
                      width=50).grid(row=1, column=1, padx=5, pady=5)
 
         # Botón Enviar
-        send_button=ctk.CTkButton(
+        send_button = ctk.CTkButton(
             command_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="darkgreen")
         send_button.grid(row=2, column=0, columnspan=2, pady=10)
 
     def create_estado_frame(self, parent):
         """Frame para mostrar el estado del PLC"""
-        status_frame=ctk.CTkFrame(parent, corner_radius=10)
+        status_frame = ctk.CTkFrame(parent, corner_radius=10)
         status_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
         # Título
-        title_label=ctk.CTkLabel(
+        title_label = ctk.CTkLabel(
             status_frame, text="Estado del Sistema", font=("Arial", 14, "bold"))
         title_label.grid(row=0, column=0, columnspan=2,
                          pady=(5, 10), sticky="w")
 
         # Etiquetas de estado
-        self.status_labels={}
-        row=1
+        self.status_labels = {}
+        row = 1
         for key in ["READY", "RUN", "MODO_OPERACION", "ALARMA", "PARADA_EMERGENCIA", "VFD", "ERROR_POSICIONAMIENTO"]:
-            label_key=ctk.CTkLabel(
+            label_key = ctk.CTkLabel(
                 status_frame, text=f"{key}:", font=("Arial", 12))
             label_key.grid(row=row, column=0, padx=10, pady=5, sticky="w")
 
-            label_value=ctk.CTkLabel(
+            label_value = ctk.CTkLabel(
                 status_frame, text="---", font=("Arial", 12))
             label_value.grid(row=row, column=1, padx=10, pady=5, sticky="w")
 
-            self.status_labels[key]=label_value
+            self.status_labels[key] = label_value
             row += 1
 
         # Posición actual
-        pos_label_key=ctk.CTkLabel(
+        pos_label_key = ctk.CTkLabel(
             status_frame, text="POSICIÓN ACTUAL:", font=("Arial", 12))
         pos_label_key.grid(row=row, column=0, padx=10, pady=5, sticky="w")
 
-        self.position_label=ctk.CTkLabel(
+        self.position_label = ctk.CTkLabel(
             status_frame, text="---", font=("Arial", 12))
         self.position_label.grid(
             row=row, column=1, padx=10, pady=5, sticky="w")
@@ -289,7 +332,7 @@ class MainWindow:
             self.plc.connect()
             self.plc.send_command(0)  # Comando STATUS
             time.sleep(2)  # Espera para recibir la respuesta
-            status_data=self.plc.receive_response()
+            status_data = self.plc.receive_response()
 
             if status_data["status_code"] is None or status_data["position"] is None:
                 print("No se recibió respuesta válida del PLC.")
@@ -299,13 +342,13 @@ class MainWindow:
             print(f"Código de estado recivido: {status_data['status_code']}")
 
             # Interpretar estado
-            interpreted_status=interpretar_estado_plc(
+            interpreted_status = interpretar_estado_plc(
                 status_data['status_code'])
             # Punto de control
             print(f"Estado interpretado: {interpreted_status}")
 
             # Diccionario de colores por estado
-            color_palette={
+            color_palette = {
                 "El equipo está listo para operar": "green",
                 "El equipo no puede operar": "red",
                 "El equipo está en movimiento (comando de movimiento activo)": "gray",
@@ -326,15 +369,15 @@ class MainWindow:
 
             # Actualizar etiquetas
             for key, label in self.status_labels.items():
-                value=interpreted_status.get(key, "Desconocido")
+                value = interpreted_status.get(key, "Desconocido")
                 label.configure(text=value)
                 # Aplicar color según el valor
                 # Color predeterminado: negro
-                label_color=color_palette.get(value, "black")
+                label_color = color_palette.get(value, "black")
                 label.configure(text_color=label_color)
 
             # Actualizar posición actual
-            position=status_data["position"]
+            position = status_data["position"]
             self.position_label.configure(text=str(position))
 
         except Exception as e:
@@ -346,11 +389,11 @@ class MainWindow:
 
     def create_config_frame(self, parent):
         """Frame para configuración de IP, puerto y modo"""
-        config_frame=ctk.CTkFrame(parent, corner_radius=10)
+        config_frame = ctk.CTkFrame(parent, corner_radius=10)
         config_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
         # Título
-        title_label=ctk.CTkLabel(
+        title_label = ctk.CTkLabel(
             config_frame, text="Configuración del Sistema", font=("Arial", 14, "bold"))
         title_label.grid(row=0, column=0, columnspan=2,
                          pady=(5, 10), sticky="w")
@@ -369,7 +412,7 @@ class MainWindow:
 
         # Puerto API
         # Puerto predeterminado para la API
-        self.api_port_var=ctk.StringVar(value=str(5001))
+        self.api_port_var = ctk.StringVar(value=str(5001))
         ctk.CTkLabel(config_frame, text="Puerto API:").grid(
             row=3, column=0, padx=5, pady=5)
         ctk.CTkEntry(config_frame, textvariable=self.api_port_var,
@@ -386,7 +429,7 @@ class MainWindow:
     def save_config(self):
         """Guarda la configuración IP/puerto en config.json"""
         try:
-            new_config={
+            new_config = {
                 "ip": self.ip_var.get(),
                 "port": int(self.port_var.get()),
                 # Guarda el puerto de la API
@@ -402,7 +445,7 @@ class MainWindow:
     def toggle_development_mode(self):
         """Activa o desactiva el modo simulador"""
         if self.dev_mode_var.get():
-            password=simpledialog.askstring(
+            password = simpledialog.askstring(
                 "Validación", "Ingrese la contraseña de desarrollo:", show='*')
             if password != "DESARROLLO123":
                 messagebox.showerror("Error", "Contraseña incorrecta")
@@ -410,15 +453,15 @@ class MainWindow:
                 return
 
             from models.plc_simulator import PLCSimulator
-            self.plc=PLCSimulator(self.config["ip"], self.config["port"])
+            self.plc = PLCSimulator(self.config["ip"], self.config["port"])
             messagebox.showinfo("Modo Desarrollo", "Modo simulador activado")
         else:
             from models.plc import PLC
-            self.plc=PLC(self.config["ip"], self.config["port"])
+            self.plc = PLC(self.config["ip"], self.config["port"])
             messagebox.showinfo("Modo Producción",
                                 "Conexión con PLC real restaurada")
 
-        self.config["simulator_enabled"]=self.dev_mode_var.get()
+        self.config["simulator_enabled"] = self.dev_mode_var.get()
         with open(CONFIG_FILE, 'w') as f:
             json.dump(self.config, f)
 
@@ -426,26 +469,36 @@ class MainWindow:
         """
         Inicia un hilo que escucha el WebSocket del backend y actualiza la GUI en tiempo real.
         """
+        def on_open(ws):
+            print("WebSocket conectado")
+            self.root.after(0, self.set_ws_status, True)
+
+        def on_close(ws, close_status_code, close_msg):
+            print("WebSocket cerrado")
+            self.root.after(0, self.set_ws_status, False)
+            self.root.after(0, self.show_ws_error,
+                            "Conexión WebSocket perdida")
+
+        def on_error(ws, error):
+            print(f"WebSocket error: {error}")
+            self.root.after(0, self.set_ws_status, False)
+            self.root.after(0, self.show_ws_error, f"Error WebSocket: {error}")
+
         def on_message(ws, message):
             try:
-                data=jsonlib.loads(message)
+                data = jsonlib.loads(message)
                 if 'status_code' in data and 'position' in data:
                     self.root.after(0, self.update_status_from_ws, data)
             except Exception as e:
                 print(f"Error procesando mensaje WebSocket: {e}")
 
-        def on_error(ws, error):
-            print(f"WebSocket error: {error}")
-
-        def on_close(ws, close_status_code, close_msg):
-            print("WebSocket cerrado")
-
         def run_ws():
             while not self._stop_ws:
                 try:
-                    ws_url=f"ws://localhost:5000/socket.io/?EIO=4&transport=websocket"
-                    self.ws=websocket.WebSocketApp(
+                    ws_url = f"ws://localhost:5000/socket.io/?EIO=4&transport=websocket"
+                    self.ws = websocket.WebSocketApp(
                         ws_url,
+                        on_open=on_open,
                         on_message=on_message,
                         on_error=on_error,
                         on_close=on_close
@@ -455,19 +508,18 @@ class MainWindow:
                     print(f"Fallo conexión WebSocket: {e}")
                 if not self._stop_ws:
                     import time
-                    time.sleep(5)  # Reintento tras error
-
+                    time.sleep(5)
         import threading
-        self.ws_thread=threading.Thread(target=run_ws, daemon=True)
+        self.ws_thread = threading.Thread(target=run_ws, daemon=True)
         self.ws_thread.start()
 
     def update_status_from_ws(self, status_data):
         """
         Actualiza la GUI con datos recibidos por WebSocket.
         """
-        interpreted_status=interpretar_estado_plc(status_data['status_code'])
+        interpreted_status = interpretar_estado_plc(status_data['status_code'])
         for key, label in self.status_labels.items():
-            value=interpreted_status.get(key, "Desconocido")
+            value = interpreted_status.get(key, "Desconocido")
             if value in ["OK", "Remoto", "Desactivada"]:
                 label.configure(text=value, text_color="green")
             elif value in ["Activa", "Manual", "Fallo"]:
@@ -477,8 +529,14 @@ class MainWindow:
         self.position_label.configure(text=str(status_data['position']))
         print(f"Estado actualizado (WebSocket): {interpreted_status}")
 
+    def show_ws_error(self, msg):
+        """
+        Muestra una notificación visual de error de conexión WebSocket.
+        """
+        messagebox.showwarning("WebSocket", msg)
+
     def close(self):
-        self._stop_ws=True
+        self._stop_ws = True
         if self.ws:
             self.ws.close()
         if self.ws_thread:
