@@ -30,6 +30,18 @@ jobs:
         with:
           token: ${{ '56d29ad3-d20c-488a-af76-91267bb93f95' }}  
 
+      - name: Instalar Bandit (análisis de seguridad)
+        run: pip install bandit
+
+      - name: Ejecutar Bandit (análisis de seguridad de código)
+        run: bandit -r . -x venv,dist,build --exit-zero
+
+      - name: Instalar pip-audit (auditoría de dependencias)
+        run: pip install pip-audit
+
+      - name: Ejecutar pip-audit (auditoría de dependencias)
+        run: pip-audit --exit-code 1
+
   build:
     runs-on: ubuntu-latest
     needs: test-and-coverage  # This job depends on the previous one
