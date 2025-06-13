@@ -19,6 +19,7 @@ import threading
 from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
+import socketio
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -82,24 +83,28 @@ class MainWindow:
         self.command_var = ctk.StringVar(value="1")
         self.argument_var = ctk.StringVar(value="3")
 
+        self.first_status_received = False
+
         # Crear el header
         self.create_header()
 
         # Crear pestañas
         self.create_tabs()
 
-        # WebSocket y visual indicator
-        self.ws_thread = None
-        self.ws = None
-        self._stop_ws = False
-        self.ws_connected = False
-        self.connection_indicator = None
-        self.connection_label = None
-        self.start_websocket_listener()
+        # Mostrar mensaje de espera
+        self.show_waiting_message()
 
         # Configurar minimización al área de notificaciones
         self.tray_icon = None
         self.root.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
+
+        self.sio = None
+        self.sio_thread = None
+        self._stop_sio = False
+        self.ws_connected = False
+        self.connection_indicator = None
+        self.connection_label = None
+        self.start_socketio_listener()
 
     def create_header(self):
         """Crea la cabecera con el logo y el botón de salir."""
@@ -324,68 +329,16 @@ class MainWindow:
         self.position_label.grid(
             row=row, column=1, padx=10, pady=5, sticky="w")
 
-    def update_status(self):
-        """Actualiza el estado del PLC en la GUI."""
-        try:
-            print("Solicitando estado actual del PLC...")  # Punto de control
-            # Reemplazo de get_current_status:
-            self.plc.connect()
-            self.plc.send_command(0)  # Comando STATUS
-            time.sleep(2)  # Espera para recibir la respuesta
-            status_data = self.plc.receive_response()
-
-            if status_data["status_code"] is None or status_data["position"] is None:
-                print("No se recibió respuesta válida del PLC.")
-                return
-
-            # Registrar el stattus_code para depuración
-            print(f"Código de estado recivido: {status_data['status_code']}")
-
-            # Interpretar estado
-            interpreted_status = interpretar_estado_plc(
-                status_data['status_code'])
-            # Punto de control
-            print(f"Estado interpretado: {interpreted_status}")
-
-            # Diccionario de colores por estado
-            color_palette = {
-                "El equipo está listo para operar": "green",
-                "El equipo no puede operar": "red",
-                "El equipo está en movimiento (comando de movimiento activo)": "gray",
-                "El equipo está detenido": "green",
-                "Modo Remoto": "green",
-                "Modo Manual": "red",
-                "No hay alarma": "green",
-                "Alarma activa": "red",
-                "Sin parada de emergencia": "green",
-                "Parada de emergencia presionada y activa": "red",
-                "El variador de velocidad está OK": "green",
-                "Error en el variador de velocidad": "red",
-                "No hay error de posicionamiento": "green",
-                "Ha ocurrido un error en el posicionamiento": "red",
-                "Ascendente": "blue",
-                "Descendente": "yellow"
-            }
-
-            # Actualizar etiquetas
-            for key, label in self.status_labels.items():
-                value = interpreted_status.get(key, "Desconocido")
-                label.configure(text=value)
-                # Aplicar color según el valor
-                # Color predeterminado: negro
-                label_color = color_palette.get(value, "black")
-                label.configure(text_color=label_color)
-
-            # Actualizar posición actual
-            position = status_data["position"]
-            self.position_label.configure(text=str(position))
-
-        except Exception as e:
-            print(f"Error al actualizar estado: {str(e)}")
-
-        finally:
-            # Programar próxima actualización
-            self.root.after(3000, self.update_status)
+    def show_waiting_message(self):
+        """
+        Muestra 'Esperando conexión...' en los labels de estado y posición.
+        """
+        if hasattr(self, 'status_labels'):
+            for label in self.status_labels.values():
+                label.configure(text="Esperando conexión...",
+                                text_color="gray")
+        if hasattr(self, 'position_label'):
+            self.position_label.configure(text="---", text_color="gray")
 
     def create_config_frame(self, parent):
         """Frame para configuración de IP, puerto y modo"""
@@ -465,58 +418,54 @@ class MainWindow:
         with open(CONFIG_FILE, 'w') as f:
             json.dump(self.config, f)
 
-    def start_websocket_listener(self):
+    def start_socketio_listener(self):
         """
-        Inicia un hilo que escucha el WebSocket del backend y actualiza la GUI en tiempo real.
+        Inicia un hilo que escucha el backend Flask-SocketIO y actualiza la GUI en tiempo real.
         """
-        def on_open(ws):
-            print("WebSocket conectado")
-            self.root.after(0, self.set_ws_status, True)
+        def sio_thread_func():
+            self.sio = socketio.Client()
 
-        def on_close(ws, close_status_code, close_msg):
-            print("WebSocket cerrado")
-            self.root.after(0, self.set_ws_status, False)
-            self.root.after(0, self.show_ws_error,
-                            "Conexión WebSocket perdida")
+            @self.sio.event
+            def connect():
+                print("Socket.IO conectado")
+                self.root.after(0, self.set_ws_status, True)
 
-        def on_error(ws, error):
-            print(f"WebSocket error: {error}")
-            self.root.after(0, self.set_ws_status, False)
-            self.root.after(0, self.show_ws_error, f"Error WebSocket: {error}")
+            @self.sio.event
+            def disconnect():
+                print("Socket.IO desconectado")
+                self.root.after(0, self.set_ws_status, False)
+                self.root.after(0, self.show_ws_error,
+                                "Conexión Socket.IO perdida")
 
-        def on_message(ws, message):
-            try:
-                data = jsonlib.loads(message)
-                if 'status_code' in data and 'position' in data:
-                    self.root.after(0, self.update_status_from_ws, data)
-            except Exception as e:
-                print(f"Error procesando mensaje WebSocket: {e}")
+            @self.sio.on('plc_status')
+            def on_plc_status(data):
+                self.root.after(0, self.update_status_from_ws, data)
 
-        def run_ws():
-            while not self._stop_ws:
+            @self.sio.on('plc_status_error')
+            def on_plc_status_error(data):
+                self.root.after(0, self.show_ws_error, data.get(
+                    'error', 'Error desconocido'))
+
+            while not self._stop_sio:
                 try:
-                    ws_url = f"ws://localhost:5000/socket.io/?EIO=4&transport=websocket"
-                    self.ws = websocket.WebSocketApp(
-                        ws_url,
-                        on_open=on_open,
-                        on_message=on_message,
-                        on_error=on_error,
-                        on_close=on_close
-                    )
-                    self.ws.run_forever()
+                    api_port = self.config.get('api_port', 5000)
+                    self.sio.connect(
+                        f"http://localhost:{api_port}", transports=['websocket'], wait_timeout=5)
+                    self.sio.wait()
                 except Exception as e:
-                    print(f"Fallo conexión WebSocket: {e}")
-                if not self._stop_ws:
+                    print(f"Fallo conexión Socket.IO: {e}")
+                    self.root.after(0, self.set_ws_status, False)
                     import time
                     time.sleep(5)
-        import threading
-        self.ws_thread = threading.Thread(target=run_ws, daemon=True)
-        self.ws_thread.start()
+
+        self.sio_thread = threading.Thread(target=sio_thread_func, daemon=True)
+        self.sio_thread.start()
 
     def update_status_from_ws(self, status_data):
         """
         Actualiza la GUI con datos recibidos por WebSocket.
         """
+        self.first_status_received = True
         interpreted_status = interpretar_estado_plc(status_data['status_code'])
         for key, label in self.status_labels.items():
             value = interpreted_status.get(key, "Desconocido")
@@ -525,19 +474,20 @@ class MainWindow:
             elif value in ["Activa", "Manual", "Fallo"]:
                 label.configure(text=value, text_color="red")
             else:
-                label.configure(text=value)
-        self.position_label.configure(text=str(status_data['position']))
-        print(f"Estado actualizado (WebSocket): {interpreted_status}")
+                label.configure(text=value, text_color="black")
+        self.position_label.configure(
+            text=str(status_data['position']), text_color="black")
+        print(f"Estado actualizado (Socket.IO): {interpreted_status}")
 
     def show_ws_error(self, msg):
         """
         Muestra una notificación visual de error de conexión WebSocket.
         """
-        messagebox.showwarning("WebSocket", msg)
+        messagebox.showwarning("Socket.IO", msg)
 
     def close(self):
-        self._stop_ws = True
-        if self.ws:
-            self.ws.close()
-        if self.ws_thread:
-            self.ws_thread.join(timeout=2)
+        self._stop_sio = True
+        if self.sio:
+            self.sio.disconnect()
+        if self.sio_thread:
+            self.sio_thread.join(timeout=2)

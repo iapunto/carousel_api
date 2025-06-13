@@ -21,6 +21,17 @@ Este proyecto proporciona una API REST y una interfaz gráfica para controlar un
 - `commons/utils.py`: Utilidades para interpretación de estados.
 - `main.py`: Lanzador de la aplicación (API + GUI).
 
+## Cambios recientes importantes
+
+- La GUI ahora utiliza `python-socketio` como cliente para conectarse al backend Flask-SocketIO, reemplazando `websocket-client`.
+- Esto asegura compatibilidad total y comunicación en tiempo real eficiente entre la interfaz y el backend, permitiendo actualizaciones instantáneas del estado del PLC sin polling agresivo.
+
+## Dependencias principales
+
+- flask-socketio
+- python-socketio[client]
+- eventlet
+
 ## Instalación y configuración
 
 1. **Clonar el repositorio**
@@ -60,7 +71,9 @@ Editar `config.json`:
 - `simulator_enabled: true` activa el modo simulador.
 - `api_port`: Puerto donde se expone la API.
 
-## Ejecución
+## Ejecución y comunicación en tiempo real
+
+El backend expone eventos en tiempo real mediante Socket.IO. La GUI se conecta usando `python-socketio` y recibe eventos `plc_status` cada vez que hay un cambio de estado relevante en el PLC o simulador. Esto permite una experiencia similar a un chat, con actualizaciones instantáneas y eficiente uso de recursos.
 
 ```bash
 python main.py
