@@ -1,5 +1,16 @@
 # carousel_api
 
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-API-lightgrey?logo=flask)](https://flask.palletsprojects.com/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-Realtime-blue?logo=socket.io)](https://socket.io/)
+[![Build Status](https://github.com/iapunto/carousel_api/actions/workflows/ci.yml/badge.svg)](https://github.com/iapunto/carousel_api/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-Automático-brightgreen?logo=pytest)](https://github.com/iapunto/carousel_api/actions)
+[![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![License](https://img.shields.io/github/license/iapunto/carousel_api?color=blue)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/iapunto/carousel_api?color=informational)](https://github.com/iapunto/carousel_api/commits/main)
+
+---
+
 API y sistema de control para carrusel vertical industrial (PLC Delta AS Series)
 
 ---
