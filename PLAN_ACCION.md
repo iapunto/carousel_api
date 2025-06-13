@@ -31,5 +31,6 @@
 ---
 
 **Notas:**
+
 - Los puntos completados están marcados con ✓.
 - El siguiente paso recomendado es abordar la documentación y luego avanzar con seguridad/refactorización según prioridades del proyecto.
