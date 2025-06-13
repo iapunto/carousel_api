@@ -11,168 +11,106 @@
 
 ---
 
-API y sistema de control para carrusel vertical industrial (PLC Delta AS Series)
+## 🚀 Descripción
+
+**carousel_api** es una solución integral para la gestión y control de sistemas de almacenamiento automatizado tipo carrusel vertical, orientada a la industria 4.0. Permite la integración directa con hardware industrial (PLC Delta AS Series) o su simulador, facilitando tanto la operación en entornos productivos como el desarrollo y pruebas seguras.
+
+- **API REST robusta** para integración con sistemas externos.
+- **Interfaz gráfica moderna** para operación manual y monitoreo en tiempo real.
+- **Simulador de PLC** para pruebas sin hardware.
+- **Comunicación en tiempo real** mediante Socket.IO (sin polling agresivo).
+- **Seguridad reforzada** y buenas prácticas de desarrollo.
 
 ---
 
-## Descripción general
+## 🛠️ Tecnologías principales
 
-Este proyecto proporciona una API REST y una interfaz gráfica para controlar un sistema de almacenamiento automatizado tipo carrusel, integrando hardware industrial (PLC Delta AS Series) o un simulador para pruebas y desarrollo.
+- **Python 3.12+**
+- **Flask** (API REST)
+- **Flask-SocketIO** y **python-socketio** (comunicación en tiempo real)
+- **Eventlet** (servidor asíncrono)
+- **CustomTkinter** (GUI)
+- **Bandit, pip-audit** (seguridad)
+- **Pytest** (tests y cobertura)
 
-- **API REST**: Permite consultar el estado y enviar comandos al carrusel.
-- **Simulador**: Emula el comportamiento del PLC para desarrollo sin hardware.
-- **Interfaz gráfica**: Permite operación manual y monitoreo.
+---
 
-## Arquitectura
+## 📦 Arquitectura
 
-- `api.py`: API Flask con endpoints REST.
-- `models/plc.py`: Comunicación con PLC real (TCP/IP).
+```
+[GUI] <---Socket.IO---> [API Flask] <---TCP/IP---> [PLC Delta / Simulador]
+```
+
+- `api.py`: API principal y servidor de eventos.
+- `models/plc.py`: Comunicación con PLC real.
 - `models/plc_simulator.py`: Simulador de PLC.
-- `controllers/carousel_controller.py`: Lógica de alto nivel y validaciones.
-- `commons/utils.py`: Utilidades para interpretación de estados.
+- `controllers/carousel_controller.py`: Lógica de negocio y validaciones.
+- `commons/utils.py`: Utilidades y validaciones centralizadas.
 - `main.py`: Lanzador de la aplicación (API + GUI).
 
-## Cambios recientes importantes
+---
 
-- La GUI ahora utiliza `python-socketio` como cliente para conectarse al backend Flask-SocketIO, reemplazando `websocket-client`.
-- Esto asegura compatibilidad total y comunicación en tiempo real eficiente entre la interfaz y el backend, permitiendo actualizaciones instantáneas del estado del PLC sin polling agresivo.
+## 🔗 Endpoints principales
 
-## Dependencias principales
+| Método | Ruta           | Descripción                        | Parámetros         |
+|--------|----------------|------------------------------------|--------------------|
+| GET    | /v1/status     | Consulta el estado actual del PLC  | -                  |
+| POST   | /v1/command    | Envía un comando al PLC/simulador  | `command`, `argument` |
 
-- flask-socketio
-- python-socketio[client]
-- eventlet
-
-## Instalación y configuración
-
-1. **Clonar el repositorio**
+**Ejemplo de uso:**
 
 ```bash
-git clone <url-del-repo>
+curl -X GET http://localhost:5000/v1/status
+curl -X POST http://localhost:5000/v1/command -H "Content-Type: application/json" -d '{"command":1,"argument":3}'
+```
+
+---
+
+## ⚡ Comunicación en tiempo real
+
+- La GUI y cualquier cliente pueden suscribirse a eventos `plc_status` vía Socket.IO.
+- Actualizaciones instantáneas ante cualquier cambio de estado, sin necesidad de polling.
+
+---
+
+## 🧑‍💻 Instalación rápida
+
+```bash
+git clone https://github.com/iapunto/carousel_api.git
 cd carousel_api
-```
-
-2. **Crear y activar entorno virtual**
-
-```bash
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate   # Windows
-```
-
-3. **Instalar dependencias**
-
-```bash
+source venv/bin/activate  # o venv\Scripts\activate en Windows
 pip install -r requirements.txt
-```
-
-4. **Configurar parámetros**
-
-Editar `config.json`:
-
-```json
-{
-  "ip": "192.168.1.100",
-  "port": 3200,
-  "simulator_enabled": false,
-  "api_port": 5000
-}
-```
-
-- `simulator_enabled: true` activa el modo simulador.
-- `api_port`: Puerto donde se expone la API.
-
-## Ejecución y comunicación en tiempo real
-
-El backend expone eventos en tiempo real mediante Socket.IO. La GUI se conecta usando `python-socketio` y recibe eventos `plc_status` cada vez que hay un cambio de estado relevante en el PLC o simulador. Esto permite una experiencia similar a un chat, con actualizaciones instantáneas y eficiente uso de recursos.
-
-```bash
 python main.py
 ```
 
-Esto inicia la API y la interfaz gráfica.
-
-## Uso de la API
-
-### Consultar estado
-
-**GET** `/v1/status`
-
-- **Respuesta exitosa:**
-
-```json
-{
-  "status_code": 3,
-  "position": 5
-}
-```
-
-- **Error:**
-
-```json
-{
-  "error": "No se pudo conectar al PLC"
-}
-```
-
-### Enviar comando
-
-**POST** `/v1/command`
-
-- **Payload:**
-
-```json
-{
-  "command": 1,
-  "argument": 3
-}
-```
-
-- **Respuesta exitosa:**
-
-```json
-{
-  "status": {
-    "READY": "El equipo está listo para operar",
-    "RUN": "El equipo está detenido",
-    ...
-  },
-  "position": 3,
-  "raw_status": 3
-}
-```
-
-- **Error:**
-
-```json
-{
-  "error": "Comando fuera de rango (0-255)"
-}
-```
-
-## Pruebas automatizadas
-
-```bash
-python -m unittest discover -s tests
-```
-
-## Modos de operación
-
-- **PLC real:** `simulator_enabled: false` en `config.json`.
-- **Simulador:** `simulator_enabled: true` (requiere contraseña en GUI: `DESARROLLO123`).
-
-## Seguridad y buenas prácticas
-
-- No exponer la API a redes públicas sin protección.
-- Revisar y ajustar CORS según el entorno.
-- No almacenar credenciales sensibles en archivos de texto plano.
-- Validar siempre los datos de entrada.
-
-## Créditos
-
-- Industrias Pico S.A.S
-- IA Punto: Soluciones Tecnológicas y Marketing
+Configura `config.json` según tu entorno (ver ejemplo en el archivo).
 
 ---
 
-Para dudas o soporte, contactar a los responsables del proyecto.
+## 🧪 Pruebas y calidad
+
+- Ejecuta todos los tests:
+  ```bash
+  python -m unittest discover -s tests
+  ```
+- Cobertura y seguridad se validan automáticamente en CI/CD (GitHub Actions).
+
+---
+
+## 🔒 Seguridad y buenas prácticas
+
+- **Análisis estático** con Bandit y pip-audit en cada commit/push.
+- **CORS restringido** y validaciones estrictas de entrada.
+- **No se almacenan credenciales sensibles** en texto plano.
+- **Manejo global de errores** y límites de payload.
+- **Documentación y código limpio** siguiendo PEP8 y buenas prácticas.
+
+---
+
+## 👨‍🏭 Créditos y soporte
+
+- Desarrollado por **Industrias Pico S.A.S** y **IA Punto**.
+- Para soporte, sugerencias o incidencias, abre un issue o contacta a los responsables del proyecto.
+
+---
