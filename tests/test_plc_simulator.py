@@ -19,7 +19,9 @@ class TestPLCSimulator(unittest.TestCase):
     def test_send_command_muevete(self):
         self.plc_simulator.connect()
         initial_position = self.plc_simulator.current_position
-        new_position = 5
+        # Elegir una nueva posición distinta a la inicial
+        new_position = initial_position + \
+            1 if initial_position < 10 else initial_position - 1
         result = self.plc_simulator.send_command(1, new_position)
         time.sleep(2.5)
         self.assertEqual(self.plc_simulator.current_position, new_position)
