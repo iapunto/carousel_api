@@ -17,6 +17,9 @@ import eventlet
 import eventlet.green.threading as threading
 from flask_socketio import SocketIO
 import copy
+import multiprocessing
+import socket
+import time
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
@@ -82,7 +85,36 @@ def monitor_plc_status(socketio, plc, interval=1.0):
         eventlet.sleep(interval)
 
 
-if __name__ == "__main__":
+def run_backend(config):
+    from models.plc import PLC
+    from models.plc_simulator import PLCSimulator
+    from api import create_app
+    from flask_socketio import SocketIO
+    import eventlet
+    import copy
+    import logging
+
+    def create_plc_instance(config):
+        if config.get("simulator_enabled"):
+            print(
+                f"Iniciando en modo: Simulador, IP: {config['ip']}, Puerto: {config['port']}")
+            return PLCSimulator(config["ip"], config["port"])
+        else:
+            print(
+                f"Iniciando en modo: PLC real, IP: {config['ip']}, Puerto: {config['port']}")
+            return PLC(config["ip"], config["port"])
+
+    def monitor_plc_status(socketio, plc, interval=1.0):
+        last_status = None
+        while True:
+            try:
+                status = plc.get_current_status()
+                if last_status is None or status != last_status:
+                    socketio.emit('plc_status', status)
+                    last_status = copy.deepcopy(status)
+            except Exception as e:
+                socketio.emit('plc_status_error', {'error': str(e)})
+            eventlet.sleep(interval)
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s %(levelname)s %(name)s: %(message)s',
@@ -91,23 +123,43 @@ if __name__ == "__main__":
             logging.StreamHandler()
         ]
     )
-    # Cargar configuración
-    config = load_config()
-
-    # Crear instancia del PLC
     plc = create_plc_instance(config)
-
-    # Crear y configurar API Flask
     flask_app = create_app(plc)
     socketio = SocketIO(flask_app, cors_allowed_origins="*",
                         async_mode="eventlet")
-
-    # Iniciar hilo de monitoreo de PLC antes de socketio.run
     eventlet.spawn_n(monitor_plc_status, socketio, plc, 1.0)
-    # Iniciar API y WebSocket en hilo principal
     socketio.run(flask_app, host="0.0.0.0", port=config.get("api_port", 5000))
 
-    # Iniciar interfaz gráfica
+
+if __name__ == "__main__":
+    config = load_config()
+    backend_process = multiprocessing.Process(
+        target=run_backend, args=(config,), daemon=True)
+    backend_process.start()
+
+    # Esperar a que el backend esté listo antes de lanzar la GUI
+    max_retries = 30
+    backend_ready = False
+    for i in range(max_retries):
+        try:
+            with socket.create_connection(("localhost", config.get("api_port", 5000)), timeout=1):
+                backend_ready = True
+                print(
+                    f"Backend disponible en puerto {config.get('api_port', 5000)}. Lanzando GUI...")
+                break
+        except (ConnectionRefusedError, OSError):
+            print(
+                f"Esperando a que el backend esté listo... (intento {i+1}/{max_retries})")
+            time.sleep(1)
+    if not backend_ready:
+        print(
+            f"ERROR: El backend no respondió en el puerto {config.get('api_port', 5000)} tras {max_retries} segundos. Abortando.")
+        backend_process.terminate()
+        exit(1)
+
+    # Iniciar GUI en el hilo principal
     root = tk.Tk()
+    plc = None  # La GUI usará la API/WS, no acceso directo
     app_gui = MainWindow(root, plc, config)
     root.mainloop()
+    backend_process.terminate()
