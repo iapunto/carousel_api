@@ -95,8 +95,6 @@ def create_app(plc):
             except Exception as e:
                 logger.error(f"Error en /v1/status: {str(e)}")
                 return jsonify({'error': f'Error: {str(e)}'}), 500
-            finally:
-                plc.close()
         else:
             return jsonify({'error': 'No se pudo conectar al PLC'}), 500
 
@@ -156,8 +154,6 @@ def create_app(plc):
             except Exception as e:
                 logger.error(f"Error en /v1/command: {str(e)}")
                 return jsonify({'error': f'Error PLC: {str(e)}'}), 500
-            finally:
-                plc.close()
         else:
             return jsonify({'error': 'No se pudo conectar al PLC'}), 500
 
