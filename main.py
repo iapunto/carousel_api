@@ -1,3 +1,4 @@
+import sys
 import time
 import socket
 import multiprocessing
@@ -15,6 +16,7 @@ from tkinter import ttk, messagebox
 import tkinter as tk
 import os
 os.environ["EVENTLET_NO_GREENDNS"] = "yes"
+sys.modules["eventlet.support.greendns"] = None
 
 """
 Aplicación de escritorio para control de carrusel industrial
