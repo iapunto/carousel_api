@@ -1,25 +1,27 @@
+import time
+import socket
+import multiprocessing
+import copy
+from flask_socketio import SocketIO
+import eventlet.green.threading as threading
+import eventlet
+import logging
+from gui.main_gui import MainWindow  # Interfaz gráfica
+from models.plc import PLC  # Importa PLC real
+from api import create_app  # Importa la API [[3]]
+import threading
+import json
+from tkinter import ttk, messagebox
+import tkinter as tk
+import os
+os.environ["EVENTLET_NO_GREENDNS"] = "yes"
+
 """
 Aplicación de escritorio para control de carrusel industrial
 Autor: Industrias Pico S.A.S
 Fecha: 2024-09-27
 """
 
-import tkinter as tk
-from tkinter import ttk, messagebox
-import json
-import os
-import threading
-from api import create_app  # Importa la API [[3]]
-from models.plc import PLC  # Importa PLC real
-from gui.main_gui import MainWindow  # Interfaz gráfica
-import logging
-import eventlet
-import eventlet.green.threading as threading
-from flask_socketio import SocketIO
-import copy
-import multiprocessing
-import socket
-import time
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
