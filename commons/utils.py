@@ -10,8 +10,8 @@ ESTADOS_PLC = {
     "READY": {
         "bit": 0,
         "descripcion": {
-            0: "El equipo no puede operar",
-            1: "El equipo está listo para operar"
+            0: "El equipo está listo para operar",
+            1: "El equipo no puede operar"
         }
     },
     "RUN": {
@@ -24,8 +24,8 @@ ESTADOS_PLC = {
     "MODO_OPERACION": {
         "bit": 2,
         "descripcion": {
-            0: "Modo Manual",
-            1: "Modo Remoto"
+            0: "Modo Remoto",
+            1: "Modo Manual"
         }
     },
     "ALARMA": {
@@ -38,8 +38,8 @@ ESTADOS_PLC = {
     "PARADA_EMERGENCIA": {
         "bit": 4,
         "descripcion": {
-            0: "Sin parada de emergencia",
-            1: "Parada de emergencia presionada y activa"
+            0: "Parada de emergencia presionada y activa",
+            1: "Sin parada de emergencia"
         }
     },
     "VFD": {
