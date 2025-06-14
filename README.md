@@ -91,9 +91,11 @@ Configura `config.json` según tu entorno (ver ejemplo en el archivo).
 ## 🧪 Pruebas y calidad
 
 - Ejecuta todos los tests:
+
   ```bash
   python -m unittest discover -s tests
   ```
+
 - Cobertura y seguridad se validan automáticamente en CI/CD (GitHub Actions).
 
 ---
