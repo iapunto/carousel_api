@@ -20,8 +20,10 @@ sys.modules["eventlet.support.greendns"] = None
 
 """
 Aplicación de escritorio para control de carrusel industrial
-Autor: Industrias Pico S.A.S
+Desarrollado: IA Punto Soluciones Tecnológicas 
+Para: Industrias Pico S.A.S
 Fecha: 2024-09-27
+Actualizado: 2025-06-14
 """
 
 
@@ -72,20 +74,25 @@ def create_plc_instance(config):
 def monitor_plc_status(socketio, plc, interval=1.0):
     """
     Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
-    Args:
-        socketio: Instancia de SocketIO.
-        plc: Instancia de PLC o simulador.
-        interval: Intervalo de consulta en segundos.
+    Ahora solo emite error si hay 3 o más fallos consecutivos.
     """
     last_status = None
+    consecutive_errors = 0
+    max_errors = 3
     while True:
         try:
             status = plc.get_current_status()
+            if 'error' in status:
+                raise RuntimeError(status['error'])
             if last_status is None or status != last_status:
                 socketio.emit('plc_status', status)
                 last_status = copy.deepcopy(status)
+            consecutive_errors = 0  # Reset al tener éxito
         except Exception as e:
-            socketio.emit('plc_status_error', {'error': str(e)})
+            consecutive_errors += 1
+            if consecutive_errors >= max_errors:
+                socketio.emit('plc_status_error', {
+                              'error': f'Error de comunicación con el PLC: {str(e)}'})
         eventlet.sleep(interval)
 
 
