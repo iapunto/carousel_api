@@ -71,11 +71,11 @@ def create_plc_instance(config):
         return PLC(config["ip"], config["port"])
 
 
-def monitor_plc_status(socketio, plc, interval=1.0):
+def monitor_plc_status(socketio, plc, interval=5.0):
     """
     Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
-    Ahora solo emite error si hay 3 o más fallos consecutivos.
-    Se agregan logs detallados para diagnóstico.
+    Ahora cierra la conexión tras cada consulta y el intervalo es de 5 segundos.
+    Se mantienen logs detallados para diagnóstico.
     """
     logger = logging.getLogger("monitor_plc_status")
     last_status = None
@@ -86,6 +86,7 @@ def monitor_plc_status(socketio, plc, interval=1.0):
             logger.info("Consultando estado del PLC...")
             status = plc.get_current_status()
             logger.info(f"Estado recibido: {status}")
+            plc.close()  # Cierra la conexión tras cada consulta
             if 'error' in status:
                 raise RuntimeError(status['error'])
             if last_status is None or status != last_status:
