@@ -75,22 +75,30 @@ def monitor_plc_status(socketio, plc, interval=1.0):
     """
     Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
     Ahora solo emite error si hay 3 o más fallos consecutivos.
+    Se agregan logs detallados para diagnóstico.
     """
+    logger = logging.getLogger("monitor_plc_status")
     last_status = None
     consecutive_errors = 0
     max_errors = 3
     while True:
         try:
+            logger.info("Consultando estado del PLC...")
             status = plc.get_current_status()
+            logger.info(f"Estado recibido: {status}")
             if 'error' in status:
                 raise RuntimeError(status['error'])
             if last_status is None or status != last_status:
+                logger.info(f"Emitiendo evento 'plc_status': {status}")
                 socketio.emit('plc_status', status)
                 last_status = copy.deepcopy(status)
             consecutive_errors = 0  # Reset al tener éxito
         except Exception as e:
             consecutive_errors += 1
+            logger.error(f"Error al consultar o emitir estado: {str(e)}")
             if consecutive_errors >= max_errors:
+                logger.error(
+                    f"Emitiendo evento 'plc_status_error' tras {consecutive_errors} fallos.")
                 socketio.emit('plc_status_error', {
                               'error': f'Error de comunicación con el PLC: {str(e)}'})
         eventlet.sleep(interval)
