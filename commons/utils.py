@@ -38,8 +38,8 @@ ESTADOS_PLC = {
     "PARADA_EMERGENCIA": {
         "bit": 4,
         "descripcion": {
-            0: "Sin parada de emergencia",
-            1: "Parada de emergencia presionada y activa"
+            0: "Parada de emergencia presionada y activa",
+            1: "Sin parada de emergencia"
         }
     },
     "VFD": {
