@@ -106,6 +106,8 @@ class MainWindow:
         self.connection_label = None
         self.start_socketio_listener()
 
+        self.error_popup_open = False  # Bandera para evitar popups en bucle
+
     def create_header(self):
         """Crea la cabecera con el logo y el botón de salir."""
         header_frame = ctk.CTkFrame(
@@ -481,9 +483,23 @@ class MainWindow:
 
     def show_ws_error(self, msg):
         """
-        Muestra una notificación visual de error de conexión WebSocket.
+        Muestra una notificación visual de error de conexión WebSocket, evitando loops de popups.
         """
+        if getattr(self, 'error_popup_open', False):
+            return  # Ya hay un popup abierto
+        self.error_popup_open = True
+        # Mostrar el error en los labels de estado
+        if hasattr(self, 'status_labels'):
+            for label in self.status_labels.values():
+                label.configure(text="Error de comunicación", text_color="red")
+        if hasattr(self, 'position_label'):
+            self.position_label.configure(text="---", text_color="red")
+
+        def on_close():
+            self.error_popup_open = False
+        # Mostrar popup y restaurar bandera al cerrarse
         messagebox.showwarning("Socket.IO", msg)
+        on_close()
 
     def close(self):
         self._stop_sio = True
