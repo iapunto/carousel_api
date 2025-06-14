@@ -151,11 +151,12 @@ class PLC:
             Si ocurre un error, retorna {'error': <mensaje>}.
         """
         try:
-            with self:
-                self.send_command(0)  # Comando STATUS
-                time.sleep(0.2)  # Pequeña espera para respuesta
-                response = self.receive_response()
-                return response
+            if not self.sock:
+                self.connect()
+            self.send_command(0)  # Comando STATUS
+            time.sleep(0.2)  # Pequeña espera para respuesta
+            response = self.receive_response()
+            return response
         except Exception as e:
             self.logger.error(f"Error en get_current_status: {str(e)}")
             return {'error': str(e)}
