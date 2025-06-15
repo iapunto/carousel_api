@@ -1,3 +1,4 @@
+from plc_cache import plc_status_cache
 import sys
 import time
 import socket
@@ -69,10 +70,6 @@ def create_plc_instance(config):
         return PLCSimulator(config["ip"], config["port"])
     else:
         return PLC(config["ip"], config["port"])
-
-
-# Estado cacheado global
-plc_status_cache = {'status': None, 'timestamp': 0}
 
 
 def monitor_plc_status(socketio, plc, interval=5.0):
