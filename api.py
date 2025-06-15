@@ -17,7 +17,7 @@ from flask_cors import CORS
 from controllers.carousel_controller import CarouselController
 import time
 import logging
-import main as main_module
+from plc_cache import plc_status_cache
 
 
 def create_app(plc):
@@ -85,8 +85,7 @@ def create_app(plc):
           500:
             description: Error de comunicación.
         """
-        cache = main_module.plc_status_cache
-        status = cache.get('status')
+        status = plc_status_cache.get('status')
         if status is not None:
             return jsonify(status), 200
         else:
