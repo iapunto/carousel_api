@@ -71,12 +71,18 @@ def create_plc_instance(config):
         return PLC(config["ip"], config["port"])
 
 
+# Estado cacheado global
+plc_status_cache = {'status': None, 'timestamp': 0}
+
+
 def monitor_plc_status(socketio, plc, interval=5.0):
     """
     Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
     Ahora cierra la conexión tras cada consulta y el intervalo es de 5 segundos.
     Se mantienen logs detallados para diagnóstico.
     """
+    import time as _time
+    global plc_status_cache
     logger = logging.getLogger("monitor_plc_status")
     last_status = None
     consecutive_errors = 0
@@ -93,6 +99,8 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                 logger.info(f"Emitiendo evento 'plc_status': {status}")
                 socketio.emit('plc_status', status)
                 last_status = copy.deepcopy(status)
+            plc_status_cache['status'] = status
+            plc_status_cache['timestamp'] = _time.time()
             consecutive_errors = 0  # Reset al tener éxito
         except Exception as e:
             consecutive_errors += 1
