@@ -1,4 +1,4 @@
-from plc_cache import plc_status_cache
+from plc_cache import plc_status_cache, plc_access_lock
 import sys
 import time
 import socket
@@ -87,27 +87,34 @@ def monitor_plc_status(socketio, plc, interval=5.0):
     while True:
         try:
             logger.info("Consultando estado del PLC...")
-            status = plc.get_current_status()
-            logger.info(f"Estado recibido: {status}")
-            plc.close()  # Cierra la conexión tras cada consulta
+            acquired = plc_access_lock.acquire(timeout=2)
+            if not acquired:
+                logger.warning(
+                    "No se pudo adquirir el lock para consultar el PLC (ocupado por comando)")
+                continue
+            try:
+                status = plc.get_current_status()
+                logger.info(f"Estado recibido: {status}")
+                plc.close()
+            finally:
+                plc_access_lock.release()
             if 'error' in status:
                 raise RuntimeError(status['error'])
             if last_status is None or status != last_status:
                 logger.info(f"Emitiendo evento 'plc_status': {status}")
                 socketio.emit('plc_status', status)
-                last_status = copy.deepcopy(status)
+                last_status = status.copy()
             plc_status_cache['status'] = status
             plc_status_cache['timestamp'] = _time.time()
-            consecutive_errors = 0  # Reset al tener éxito
+            consecutive_errors = 0
         except Exception as e:
+            logger.error(f"Error al consultar el PLC: {e}")
             consecutive_errors += 1
-            logger.error(f"Error al consultar o emitir estado: {str(e)}")
             if consecutive_errors >= max_errors:
                 logger.error(
                     f"Emitiendo evento 'plc_status_error' tras {consecutive_errors} fallos.")
-                socketio.emit('plc_status_error', {
-                              'error': f'Error de comunicación con el PLC: {str(e)}'})
-        eventlet.sleep(interval)
+                socketio.emit('plc_status_error', {'error': str(e)})
+        _time.sleep(interval)
 
 
 def run_backend(config):
