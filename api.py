@@ -36,7 +36,7 @@ def create_app(plc):
 
     # Configuración de CORS segura
     allowed_origins = os.getenv(
-        "API_ALLOWED_ORIGINS", "http://localhost, http://127.0.0.1, http://192.168.1.0/24").split(",")
+        "API_ALLOWED_ORIGINS", "http://localhost, http://127.0.0.1, http://192.168.1.0/24, http://localhost:3000,http://localhost:5001,http://127.0.0.1:3000,http://127.0.0.1:5001").split(",")
     allowed_origins = [o.strip() for o in allowed_origins]
     CORS(app, resources={r"/*": {"origins": allowed_origins}})
 
