@@ -17,6 +17,7 @@ from flask_cors import CORS
 from controllers.carousel_controller import CarouselController
 import time
 import logging
+import main as main_module
 
 
 def create_app(plc):
@@ -84,17 +85,12 @@ def create_app(plc):
           500:
             description: Error de comunicación.
         """
-        if plc.connect():
-            try:
-                plc.send_command(0)  # Comando STATUS
-                time.sleep(0.5)
-                response = plc.receive_response()
-                return jsonify(response), 200
-            except Exception as e:
-                logger.error(f"Error en /v1/status: {str(e)}")
-                return jsonify({'error': f'Error: {str(e)}'}), 500
+        cache = main_module.plc_status_cache
+        status = cache.get('status')
+        if status is not None:
+            return jsonify(status), 200
         else:
-            return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+            return jsonify({'error': 'Estado no disponible'}), 503
 
     @app.route('/v1/command', methods=['POST'])
     def send_command():
@@ -128,7 +124,6 @@ def create_app(plc):
             return jsonify({'error': 'Solicitud debe ser JSON'}), 400
 
         data = request.get_json()
-        # Validación estricta de tipos y rangos
         command = data.get('command')
         argument = data.get('argument')
 
@@ -148,6 +143,7 @@ def create_app(plc):
         if plc.connect():
             try:
                 carousel_controller.send_command(command, argument)
+                plc.close()
                 return jsonify({'status': 'Comando enviado'}), 200
             except Exception as e:
                 logger.error(f"Error en /v1/command: {str(e)}")
