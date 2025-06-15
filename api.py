@@ -17,7 +17,7 @@ from flask_cors import CORS
 from controllers.carousel_controller import CarouselController
 import time
 import logging
-from plc_cache import plc_status_cache
+from plc_cache import plc_status_cache, plc_access_lock
 
 
 def create_app(plc):
@@ -121,33 +121,28 @@ def create_app(plc):
         """
         if not request.is_json:
             return jsonify({'error': 'Solicitud debe ser JSON'}), 400
-
         data = request.get_json()
         command = data.get('command')
         argument = data.get('argument')
-
         if command is None:
-            return jsonify({'error': 'Comando no especificado'}), 400
-        if not isinstance(command, int):
-            return jsonify({'error': 'El comando debe ser un entero'}), 400
-        if not (0 <= command <= 255):
-            return jsonify({'error': 'Comando fuera de rango (0-255)'}), 400
-
-        if argument is not None:
-            if not isinstance(argument, int):
-                return jsonify({'error': 'El argumento debe ser un entero'}), 400
-            if not (0 <= argument <= 255):
-                return jsonify({'error': 'Argumento inválido (0-255)'}), 400
-
-        if plc.connect():
-            try:
-                carousel_controller.send_command(command, argument)
-                plc.close()
-                return jsonify({'status': 'Comando enviado'}), 200
-            except Exception as e:
-                logger.error(f"Error en /v1/command: {str(e)}")
-                return jsonify({'error': f'Error PLC: {str(e)}'}), 500
-        else:
-            return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+            return jsonify({'error': 'Falta el parámetro command'}), 400
+        acquired = plc_access_lock.acquire(timeout=2)
+        if not acquired:
+            return jsonify({'error': 'PLC ocupado, intente de nuevo en unos segundos'}), 409
+        try:
+            if plc.connect():
+                try:
+                    plc.send_command(command, argument)
+                    time.sleep(0.5)
+                    response = plc.receive_response()
+                    plc.close()
+                    return jsonify(response), 200
+                except Exception as e:
+                    logger.error(f"Error en /v1/command: {str(e)}")
+                    return jsonify({'error': f'Error: {str(e)}'}), 500
+            else:
+                return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+        finally:
+            plc_access_lock.release()
 
     return app
