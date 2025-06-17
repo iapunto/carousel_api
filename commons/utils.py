@@ -10,43 +10,43 @@ ESTADOS_PLC = {
     "READY": {
         "bit": 0,
         "descripcion": {
-            0: "El equipo está listo para operar",
-            1: "El equipo no puede operar"
+            0: "El equipo no puede operar",
+            1: "El equipo está listo para operar"
         }
     },
     "RUN": {
         "bit": 1,
         "descripcion": {
-            0: "El equipo está detenido",
-            1: "El equipo está en movimiento (comando de movimiento activo)"
+            0: "El equipo no se está posicionando",
+            1: "El equipo está en movimiento"
         }
     },
     "MODO_OPERACION": {
         "bit": 2,
         "descripcion": {
             0: "Modo Manual",
-            1: "Modo Remoto"
+            1: "Modo Automático"
         }
     },
     "ALARMA": {
         "bit": 3,
         "descripcion": {
-            0: "Alarma activa",
-            1: "No hay alarma"
+            0: "No hay alarma",
+            1: "Alarma activa"
         }
     },
     "PARADA_EMERGENCIA": {
         "bit": 4,
         "descripcion": {
-            1: "Sin parada de emergencia",
-            0: "Parada de emergencia presionada y activa"
+            0: "Sin parada de emergencia",
+            1: "Parada presionada y activa"
         }
     },
     "VFD": {
         "bit": 5,
         "descripcion": {
-            0: "El variador de velocidad está OK",
-            1: "Error en el variador de velocidad"
+            0: "Error en el variador de velocidad",
+            1: "El variador de velocidad está OK"
         }
     },
     "ERROR_POSICIONAMIENTO": {
