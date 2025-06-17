@@ -484,6 +484,8 @@ class MainWindow:
                 label.configure(text=value, text_color="#FFFFFF")
         self.position_label.configure(
             text=str(data.get('position', "---")), text_color="#FFFFFF")
+        print(f"[DEBUG] status_data recibido: {status_data}")
+        print(f"[DEBUG] data['position']: {data.get('position')}")
         print(f"Estado actualizado (Socket.IO): {interpreted_status}")
 
     def show_ws_error(self, msg):
