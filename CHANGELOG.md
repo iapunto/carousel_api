@@ -21,3 +21,5 @@
 
 - Refuerzo de la validación de parámetros en la API (api.py): ahora se verifica tipo y rango de command y argument en /v1/command, rechazando datos inválidos con mensajes claros y códigos HTTP apropiados.
 - Mejorada la configuración de CORS: solo se permiten orígenes explícitamente autorizados y se documenta el uso de la variable de entorno API_ALLOWED_ORIGINS para producción.
+
+- Estandarización de respuestas y manejo de errores en la API: todos los endpoints principales responden con el formato {success, data, error, code} y usan códigos de error internos claros y documentados. Mensajes en español.

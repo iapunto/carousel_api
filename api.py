@@ -99,11 +99,21 @@ def create_app(plc):
             logger.info(f"[STATUS] Petición desde {request.remote_addr}")
             result = carousel_controller.get_current_status()
             logger.info(f"[STATUS] Respuesta: {result}")
-            return jsonify(result), 200
+            return jsonify({
+                'success': True,
+                'data': result,
+                'error': None,
+                'code': None
+            }), 200
         except Exception as e:
             logger.error(
                 f"[STATUS] Error para {request.remote_addr}: {str(e)}")
-            return jsonify({'error': f'Error: {str(e)}'}), 500
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': f'Error de comunicación con el PLC: {str(e)}',
+                'code': 'PLC_CONN_ERROR'
+            }), 500
 
     @app.route('/v1/command', methods=['POST'])
     def send_command():
@@ -136,34 +146,63 @@ def create_app(plc):
         if not request.is_json:
             logger.warning(
                 f"[COMMAND] Solicitud no JSON desde {request.remote_addr}")
-            return jsonify({'error': 'Solicitud debe ser JSON'}), 400
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': 'Solicitud debe ser JSON',
+                'code': 'BAD_REQUEST'
+            }), 400
         data = request.get_json()
         command = data.get('command')
         argument = data.get('argument')
-        # Validación estricta de tipos y rangos
         if not isinstance(command, int) or not (0 <= command <= 255):
             logger.warning(
                 f"[COMMAND] Parámetro 'command' inválido desde {request.remote_addr}, valor: {command}")
-            return jsonify({'error': "El parámetro 'command' debe ser un entero entre 0 y 255"}), 400
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': "El parámetro 'command' debe ser un entero entre 0 y 255",
+                'code': 'BAD_COMMAND'
+            }), 400
         if argument is not None and (not isinstance(argument, int) or not (0 <= argument <= 255)):
             logger.warning(
                 f"[COMMAND] Parámetro 'argument' inválido desde {request.remote_addr}, valor: {argument}")
-            return jsonify({'error': "El parámetro 'argument' debe ser un entero entre 0 y 255"}), 400
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': "El parámetro 'argument' debe ser un entero entre 0 y 255",
+                'code': 'BAD_COMMAND'
+            }), 400
         acquired = plc_access_lock.acquire(timeout=2)
         if not acquired:
             logger.warning(f"[COMMAND] PLC ocupado para {request.remote_addr}")
-            return jsonify({'error': 'PLC ocupado, intente de nuevo en unos segundos'}), 409
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': 'PLC ocupado, intente de nuevo en unos segundos',
+                'code': 'PLC_BUSY'
+            }), 409
         try:
             try:
                 logger.info(
                     f"[COMMAND] Petición desde {request.remote_addr}, datos: {data}")
                 result = carousel_controller.send_command(command, argument)
                 logger.info(f"[COMMAND] Respuesta: {result}")
-                return jsonify(result), 200
+                return jsonify({
+                    'success': True,
+                    'data': result,
+                    'error': None,
+                    'code': None
+                }), 200
             except Exception as e:
                 logger.error(
                     f"[COMMAND] Error para {request.remote_addr}, datos: {data}, error: {str(e)}")
-                return jsonify({'error': f'Error: {str(e)}'}), 500
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': f'Error al procesar el comando: {str(e)}',
+                    'code': 'INTERNAL_ERROR'
+                }), 500
         finally:
             plc_access_lock.release()
 
