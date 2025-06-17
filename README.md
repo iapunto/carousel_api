@@ -75,12 +75,12 @@ curl -X POST http://localhost:5000/v1/command -H "Content-Type: application/json
 
 ## 🧑‍💻 Instalación rápida
 
-```bash
+   ```bash
 git clone https://github.com/iapunto/carousel_api.git
 cd carousel_api
-python -m venv venv
+   python -m venv venv
 source venv/bin/activate  # o venv\Scripts\activate en Windows
-pip install -r requirements.txt
+   pip install -r requirements.txt
 python main.py
 ```
 

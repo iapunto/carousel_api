@@ -24,8 +24,8 @@ ESTADOS_PLC = {
     "MODO_OPERACION": {
         "bit": 2,
         "descripcion": {
-            1: "Modo Manual",
-            0: "Modo Remoto"
+            0: "Modo Manual",
+            1: "Modo Remoto"
         }
     },
     "ALARMA": {
@@ -101,7 +101,7 @@ def determinar_bandera(estado, valor_bit):
         str: Descripción específica del estado.
     """
     if estado == "READY":
-        return "OK" if valor_bit == 1 else "Inactivo"
+        return "OK" if valor_bit == 0 else "Inactivo"
     elif estado == "RUN":
         return "Moviendose" if valor_bit == 1 else "Parado"
     elif estado == "MODO_OPERACION":
