@@ -130,7 +130,7 @@ class PLC:
                     f"[PLC][DEPURACION] Bytes recibidos: {[b for b in data]} (hex: {[hex(b) for b in data]})")
                 # Por compatibilidad, sigue retornando los dos primeros
                 status = data[0]
-                position = data[8] if len(data) > 8 else 0
+                position = data[1] if len(data) > 1 else 0
                 return {
                     'status_code': status,
                     'position': position,
