@@ -55,6 +55,8 @@ class CarouselController:
                     f"[PLC] Enviando comando: {command}, argumento: {argument}")
                 self.plc.send_command(command, argument)
                 response = self.plc.receive_response()
+            # Log de bajo nivel: datos crudos recibidos
+            self.logger.info(f"[PLC][RAW] Respuesta cruda: {response}")
             status = interpretar_estado_plc(response['status_code'])
             self.logger.info(
                 f"[PLC] Respuesta recibida: status_code={response['status_code']}, position={response['position']}")
