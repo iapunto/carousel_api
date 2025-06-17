@@ -56,6 +56,15 @@ class CarouselController:
                 self.plc.send_command(command, argument)
                 response = self.plc.receive_response()
             # Log de bajo nivel: datos crudos recibidos
+            status_code = response['status_code']
+            position = response['position']
+            # Formato binario de 8 bits
+            status_bin = format(status_code, '08b')
+            # Diccionario bit a bit
+            status_bits = {f'bit_{i}': (
+                status_code >> i) & 1 for i in range(7, -1, -1)}
+            self.logger.info(
+                f"[PLC][RAW] status_code: {status_code} (bin: {status_bin}), bits: {status_bits}, position: {position}")
             self.logger.info(f"[PLC][RAW] Respuesta cruda: {response}")
             status = interpretar_estado_plc(response['status_code'])
             self.logger.info(
