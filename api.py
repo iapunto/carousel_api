@@ -78,20 +78,24 @@ def create_app(plc):
                 schema:
                   type: object
                   properties:
-                    status_code:
-                      type: integer
-                      description: Código de estado (8 bits).
+                    status:
+                      type: object
+                      description: Estado interpretado del PLC.
                     position:
                       type: integer
                       description: Posición del carrusel (0-9).
+                    raw_status:
+                      type: integer
+                      description: Código de estado (8 bits).
           500:
             description: Error de comunicación.
         """
-        status = plc_status_cache.get('status')
-        if status is not None:
-            return jsonify(status), 200
-        else:
-            return jsonify({'error': 'Estado no disponible'}), 503
+        try:
+            result = carousel_controller.get_current_status()
+            return jsonify(result), 200
+        except Exception as e:
+            logger.error(f"Error en /v1/status: {str(e)}")
+            return jsonify({'error': f'Error: {str(e)}'}), 500
 
     @app.route('/v1/command', methods=['POST'])
     def send_command():
@@ -133,18 +137,12 @@ def create_app(plc):
         if not acquired:
             return jsonify({'error': 'PLC ocupado, intente de nuevo en unos segundos'}), 409
         try:
-            if plc.connect():
-                try:
-                    plc.send_command(command, argument)
-                    time.sleep(0.5)
-                    response = plc.receive_response()
-                    plc.close()
-                    return jsonify(response), 200
-                except Exception as e:
-                    logger.error(f"Error en /v1/command: {str(e)}")
-                    return jsonify({'error': f'Error: {str(e)}'}), 500
-            else:
-                return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+            try:
+                result = carousel_controller.send_command(command, argument)
+                return jsonify(result), 200
+            except Exception as e:
+                logger.error(f"Error en /v1/command: {str(e)}")
+                return jsonify({'error': f'Error: {str(e)}'}), 500
         finally:
             plc_access_lock.release()
 
