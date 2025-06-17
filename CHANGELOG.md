@@ -18,3 +18,6 @@
 - Mejorado el hilo de monitoreo (main.py): ahora implementa reconexión automática y mantiene la conexión persistente al PLC. Se notifican eventos de reconexión a la GUI/WMS y se refuerza la robustez del sistema.
 
 - Mejorados y unificados los logs en la API (api.py), controlador (carousel_controller.py) y monitor (main.py): ahora todos los eventos críticos, advertencias y errores quedan registrados con contexto relevante y formato consistente, facilitando el monitoreo y diagnóstico.
+
+- Refuerzo de la validación de parámetros en la API (api.py): ahora se verifica tipo y rango de command y argument en /v1/command, rechazando datos inválidos con mensajes claros y códigos HTTP apropiados.
+- Mejorada la configuración de CORS: solo se permiten orígenes explícitamente autorizados y se documenta el uso de la variable de entorno API_ALLOWED_ORIGINS para producción.

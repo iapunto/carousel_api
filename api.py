@@ -37,8 +37,13 @@ def create_app(plc):
     # Configuración de CORS segura
     allowed_origins = os.getenv(
         "API_ALLOWED_ORIGINS", "http://localhost, http://127.0.0.1, http://192.168.1.0/24, http://localhost:3000,http://localhost:5001,http://127.0.0.1:3000,http://127.0.0.1:5001").split(",")
-    allowed_origins = [o.strip() for o in allowed_origins]
+    allowed_origins = [o.strip()
+                       for o in allowed_origins if o.strip() and o.strip() != "*"]
+    if not allowed_origins:
+        raise RuntimeError(
+            "Por seguridad, debe definir orígenes permitidos en la variable de entorno API_ALLOWED_ORIGINS")
     CORS(app, resources={r"/*": {"origins": allowed_origins}})
+    # Documentación: Para producción, configure API_ALLOWED_ORIGINS solo con los dominios/autorizados.
 
     # Configuración de Swagger [[5]]
     app.config['SWAGGER'] = {
@@ -135,10 +140,15 @@ def create_app(plc):
         data = request.get_json()
         command = data.get('command')
         argument = data.get('argument')
-        if command is None:
+        # Validación estricta de tipos y rangos
+        if not isinstance(command, int) or not (0 <= command <= 255):
             logger.warning(
-                f"[COMMAND] Falta parámetro 'command' desde {request.remote_addr}, datos: {data}")
-            return jsonify({'error': 'Falta el parámetro command'}), 400
+                f"[COMMAND] Parámetro 'command' inválido desde {request.remote_addr}, valor: {command}")
+            return jsonify({'error': "El parámetro 'command' debe ser un entero entre 0 y 255"}), 400
+        if argument is not None and (not isinstance(argument, int) or not (0 <= argument <= 255)):
+            logger.warning(
+                f"[COMMAND] Parámetro 'argument' inválido desde {request.remote_addr}, valor: {argument}")
+            return jsonify({'error': "El parámetro 'argument' debe ser un entero entre 0 y 255"}), 400
         acquired = plc_access_lock.acquire(timeout=2)
         if not acquired:
             logger.warning(f"[COMMAND] PLC ocupado para {request.remote_addr}")
