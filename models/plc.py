@@ -129,7 +129,8 @@ class PLC:
                 self.logger.info(
                     f"[PLC][DEPURACION] Bytes recibidos: {[b for b in data]} (hex: {[hex(b) for b in data]})")
                 # Por compatibilidad, sigue retornando los dos primeros
-                status, position = data[0], data[1]
+                status = data[0]
+                position = data[8] if len(data) > 8 else 0
                 return {
                     'status_code': status,
                     'position': position,
