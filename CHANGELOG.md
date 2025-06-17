@@ -25,3 +25,5 @@
 - Estandarización de respuestas y manejo de errores en la API: todos los endpoints principales responden con el formato {success, data, error, code} y usan códigos de error internos claros y documentados. Mensajes en español.
 
 - Estandarización del formato de eventos SocketIO: todos los eventos relevantes (plc_status, plc_status_error, plc_reconnecting, plc_reconnected) siguen el formato {success, data, error, code} y usan los mismos códigos de error internos que la API REST.
+
+- Centralización de los códigos de error internos en commons/error_codes.py y actualización de la API y eventos para usar estas constantes, facilitando la mantenibilidad y la integración profesional.

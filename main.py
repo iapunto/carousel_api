@@ -1,3 +1,4 @@
+from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY
 from plc_cache import plc_status_cache, plc_access_lock
 import sys
 import time
@@ -95,7 +96,7 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                     'success': False,
                     'data': None,
                     'error': 'PLC ocupado, intente de nuevo en unos segundos',
-                    'code': 'PLC_BUSY'
+                    'code': PLC_BUSY
                 })
                 _time.sleep(interval)
                 continue
@@ -105,7 +106,7 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                         'success': False,
                         'data': None,
                         'error': 'Intentando reconectar al PLC...',
-                        'code': 'PLC_CONN_ERROR'
+                        'code': PLC_CONN_ERROR
                     })
                     logger.info("[MONITOR] Intentando reconectar al PLC...")
                     if not plc.connect():
@@ -114,7 +115,7 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                             'success': False,
                             'data': None,
                             'error': 'No se pudo reconectar al PLC',
-                            'code': 'PLC_CONN_ERROR'
+                            'code': PLC_CONN_ERROR
                         })
                         raise RuntimeError("No se pudo reconectar al PLC")
                     connected = True
@@ -136,7 +137,7 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                     'success': False,
                     'data': None,
                     'error': status['error'],
-                    'code': 'PLC_CONN_ERROR'
+                    'code': PLC_CONN_ERROR
                 })
                 raise RuntimeError(status['error'])
             if last_status is None or status != last_status:
@@ -162,7 +163,7 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                     'success': False,
                     'data': None,
                     'error': str(e),
-                    'code': 'PLC_CONN_ERROR'
+                    'code': PLC_CONN_ERROR
                 })
             _time.sleep(2)
             continue

@@ -20,6 +20,7 @@ from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from controllers.carousel_controller import CarouselController
 import time
 from plc_cache import plc_status_cache, plc_access_lock
+from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY, BAD_COMMAND, BAD_REQUEST, INTERNAL_ERROR
 
 
 def create_app(plc):
@@ -112,7 +113,7 @@ def create_app(plc):
                 'success': False,
                 'data': None,
                 'error': f'Error de comunicación con el PLC: {str(e)}',
-                'code': 'PLC_CONN_ERROR'
+                'code': PLC_CONN_ERROR
             }), 500
 
     @app.route('/v1/command', methods=['POST'])
@@ -150,7 +151,7 @@ def create_app(plc):
                 'success': False,
                 'data': None,
                 'error': 'Solicitud debe ser JSON',
-                'code': 'BAD_REQUEST'
+                'code': BAD_REQUEST
             }), 400
         data = request.get_json()
         command = data.get('command')
@@ -162,7 +163,7 @@ def create_app(plc):
                 'success': False,
                 'data': None,
                 'error': "El parámetro 'command' debe ser un entero entre 0 y 255",
-                'code': 'BAD_COMMAND'
+                'code': BAD_COMMAND
             }), 400
         if argument is not None and (not isinstance(argument, int) or not (0 <= argument <= 255)):
             logger.warning(
@@ -171,7 +172,7 @@ def create_app(plc):
                 'success': False,
                 'data': None,
                 'error': "El parámetro 'argument' debe ser un entero entre 0 y 255",
-                'code': 'BAD_COMMAND'
+                'code': BAD_COMMAND
             }), 400
         acquired = plc_access_lock.acquire(timeout=2)
         if not acquired:
@@ -180,7 +181,7 @@ def create_app(plc):
                 'success': False,
                 'data': None,
                 'error': 'PLC ocupado, intente de nuevo en unos segundos',
-                'code': 'PLC_BUSY'
+                'code': PLC_BUSY
             }), 409
         try:
             try:
@@ -201,7 +202,7 @@ def create_app(plc):
                     'success': False,
                     'data': None,
                     'error': f'Error al procesar el comando: {str(e)}',
-                    'code': 'INTERNAL_ERROR'
+                    'code': INTERNAL_ERROR
                 }), 500
         finally:
             plc_access_lock.release()
