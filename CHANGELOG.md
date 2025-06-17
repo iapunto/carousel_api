@@ -27,3 +27,5 @@
 - Estandarización del formato de eventos SocketIO: todos los eventos relevantes (plc_status, plc_status_error, plc_reconnecting, plc_reconnected) siguen el formato {success, data, error, code} y usan los mismos códigos de error internos que la API REST.
 
 - Centralización de los códigos de error internos en commons/error_codes.py y actualización de la API y eventos para usar estas constantes, facilitando la mantenibilidad y la integración profesional.
+
+- Implementado mecanismo de bloqueo interproceso usando filelock, integrado en la API y el monitor para evitar acceso concurrente al PLC desde procesos distintos.

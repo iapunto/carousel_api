@@ -19,7 +19,7 @@ from commons.utils import interpretar_estado_plc
 from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from controllers.carousel_controller import CarouselController
 import time
-from plc_cache import plc_status_cache, plc_access_lock
+from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
 from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY, BAD_COMMAND, BAD_REQUEST, INTERNAL_ERROR
 
 
@@ -174,8 +174,20 @@ def create_app(plc):
                 'error': "El parámetro 'argument' debe ser un entero entre 0 y 255",
                 'code': BAD_COMMAND
             }), 400
+        # Bloqueo interproceso antes del lock global
+        interprocess_acquired = plc_interprocess_lock.acquire(timeout=2)
+        if not interprocess_acquired:
+            logger.warning(
+                f"[COMMAND] PLC ocupado por otro proceso para {request.remote_addr}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                'code': PLC_BUSY
+            }), 409
         acquired = plc_access_lock.acquire(timeout=2)
         if not acquired:
+            plc_interprocess_lock.release()
             logger.warning(f"[COMMAND] PLC ocupado para {request.remote_addr}")
             return jsonify({
                 'success': False,
@@ -206,5 +218,6 @@ def create_app(plc):
                 }), 500
         finally:
             plc_access_lock.release()
+            plc_interprocess_lock.release()
 
     return app

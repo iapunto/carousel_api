@@ -1,5 +1,5 @@
 from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY
-from plc_cache import plc_status_cache, plc_access_lock
+from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
 import sys
 import time
 import socket
@@ -88,8 +88,22 @@ def monitor_plc_status(socketio, plc, interval=5.0):
     while True:
         try:
             logger.info("[MONITOR] Consultando estado del PLC...")
+            # Bloqueo interproceso antes del lock global
+            interprocess_acquired = plc_interprocess_lock.acquire(timeout=2)
+            if not interprocess_acquired:
+                logger.warning(
+                    "[MONITOR] PLC ocupado por otro proceso (interproceso)")
+                socketio.emit('plc_status_error', {
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                })
+                _time.sleep(interval)
+                continue
             acquired = plc_access_lock.acquire(timeout=2)
             if not acquired:
+                plc_interprocess_lock.release()
                 logger.warning(
                     "[MONITOR] No se pudo adquirir el lock para consultar el PLC (ocupado por comando)")
                 socketio.emit('plc_status_error', {
@@ -130,6 +144,7 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                 logger.info(f"[MONITOR] Estado recibido: {status}")
             finally:
                 plc_access_lock.release()
+                plc_interprocess_lock.release()
             if 'error' in status:
                 logger.error(
                     f"[MONITOR] Error reportado por PLC: {status['error']}")
