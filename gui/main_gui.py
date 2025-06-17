@@ -189,6 +189,12 @@ class MainWindow:
             return
 
         try:
+            # Verificar si el PLC está inicializado
+            if self.plc is None:
+                messagebox.showerror(
+                    "Error", "El PLC no está inicializado. Por favor, configure la conexión antes de enviar comandos.")
+                return
+
             # Obtener valores del formulario
             command = int(self.command_var.get())
             argument = int(self.argument_var.get())
