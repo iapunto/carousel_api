@@ -51,18 +51,21 @@ class CarouselController:
             validar_argumento(argument)
         try:
             with self.plc:  # Gestión automática de conexión [[2]]
+                self.logger.info(
+                    f"[PLC] Enviando comando: {command}, argumento: {argument}")
                 self.plc.send_command(command, argument)
                 response = self.plc.receive_response()
-
-            # Interpretar estado [[3]]
             status = interpretar_estado_plc(response['status_code'])
+            self.logger.info(
+                f"[PLC] Respuesta recibida: status_code={response['status_code']}, position={response['position']}")
             return {
                 'status': status,
                 'position': response['position'],
                 'raw_status': response['status_code']
             }
         except Exception as e:
-            self.logger.error(f"Error en send_command: {str(e)}")
+            self.logger.error(
+                f"[PLC] Error en send_command (comando={command}, argumento={argument}): {str(e)}")
             raise RuntimeError(f"Fallo en comunicación PLC: {str(e)}")
 
     def get_current_status(self) -> dict:

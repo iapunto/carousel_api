@@ -16,3 +16,5 @@
 - Refactorizada la GUI (main_gui.py) para que consuma únicamente la API REST y elimine cualquier acceso directo al PLC. Ahora todos los comandos se envían vía HTTP a /v1/command.
 
 - Mejorado el hilo de monitoreo (main.py): ahora implementa reconexión automática y mantiene la conexión persistente al PLC. Se notifican eventos de reconexión a la GUI/WMS y se refuerza la robustez del sistema.
+
+- Mejorados y unificados los logs en la API (api.py), controlador (carousel_controller.py) y monitor (main.py): ahora todos los eventos críticos, advertencias y errores quedan registrados con contexto relevante y formato consistente, facilitando el monitoreo y diagnóstico.

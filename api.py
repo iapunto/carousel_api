@@ -91,10 +91,13 @@ def create_app(plc):
             description: Error de comunicación.
         """
         try:
+            logger.info(f"[STATUS] Petición desde {request.remote_addr}")
             result = carousel_controller.get_current_status()
+            logger.info(f"[STATUS] Respuesta: {result}")
             return jsonify(result), 200
         except Exception as e:
-            logger.error(f"Error en /v1/status: {str(e)}")
+            logger.error(
+                f"[STATUS] Error para {request.remote_addr}: {str(e)}")
             return jsonify({'error': f'Error: {str(e)}'}), 500
 
     @app.route('/v1/command', methods=['POST'])
@@ -126,22 +129,30 @@ def create_app(plc):
             description: Error interno.
         """
         if not request.is_json:
+            logger.warning(
+                f"[COMMAND] Solicitud no JSON desde {request.remote_addr}")
             return jsonify({'error': 'Solicitud debe ser JSON'}), 400
-
         data = request.get_json()
         command = data.get('command')
         argument = data.get('argument')
         if command is None:
+            logger.warning(
+                f"[COMMAND] Falta parámetro 'command' desde {request.remote_addr}, datos: {data}")
             return jsonify({'error': 'Falta el parámetro command'}), 400
         acquired = plc_access_lock.acquire(timeout=2)
         if not acquired:
+            logger.warning(f"[COMMAND] PLC ocupado para {request.remote_addr}")
             return jsonify({'error': 'PLC ocupado, intente de nuevo en unos segundos'}), 409
         try:
             try:
+                logger.info(
+                    f"[COMMAND] Petición desde {request.remote_addr}, datos: {data}")
                 result = carousel_controller.send_command(command, argument)
+                logger.info(f"[COMMAND] Respuesta: {result}")
                 return jsonify(result), 200
             except Exception as e:
-                logger.error(f"Error en /v1/command: {str(e)}")
+                logger.error(
+                    f"[COMMAND] Error para {request.remote_addr}, datos: {data}, error: {str(e)}")
                 return jsonify({'error': f'Error: {str(e)}'}), 500
         finally:
             plc_access_lock.release()
