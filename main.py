@@ -91,19 +91,39 @@ def monitor_plc_status(socketio, plc, interval=5.0):
             if not acquired:
                 logger.warning(
                     "[MONITOR] No se pudo adquirir el lock para consultar el PLC (ocupado por comando)")
+                socketio.emit('plc_status_error', {
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado, intente de nuevo en unos segundos',
+                    'code': 'PLC_BUSY'
+                })
                 _time.sleep(interval)
                 continue
             try:
                 if not connected:
                     socketio.emit('plc_reconnecting', {
-                                  'msg': 'Intentando reconectar al PLC...'})
+                        'success': False,
+                        'data': None,
+                        'error': 'Intentando reconectar al PLC...',
+                        'code': 'PLC_CONN_ERROR'
+                    })
                     logger.info("[MONITOR] Intentando reconectar al PLC...")
                     if not plc.connect():
                         logger.error("[MONITOR] Fallo al reconectar al PLC.")
+                        socketio.emit('plc_status_error', {
+                            'success': False,
+                            'data': None,
+                            'error': 'No se pudo reconectar al PLC',
+                            'code': 'PLC_CONN_ERROR'
+                        })
                         raise RuntimeError("No se pudo reconectar al PLC")
                     connected = True
                     socketio.emit('plc_reconnected', {
-                                  'msg': 'Reconexión exitosa al PLC.'})
+                        'success': True,
+                        'data': {'msg': 'Reconexión exitosa al PLC.'},
+                        'error': None,
+                        'code': None
+                    })
                     logger.info("[MONITOR] Reconexión exitosa al PLC.")
                 status = plc.get_current_status()
                 logger.info(f"[MONITOR] Estado recibido: {status}")
@@ -112,10 +132,21 @@ def monitor_plc_status(socketio, plc, interval=5.0):
             if 'error' in status:
                 logger.error(
                     f"[MONITOR] Error reportado por PLC: {status['error']}")
+                socketio.emit('plc_status_error', {
+                    'success': False,
+                    'data': None,
+                    'error': status['error'],
+                    'code': 'PLC_CONN_ERROR'
+                })
                 raise RuntimeError(status['error'])
             if last_status is None or status != last_status:
                 logger.info(f"[MONITOR] Emite evento 'plc_status': {status}")
-                socketio.emit('plc_status', status)
+                socketio.emit('plc_status', {
+                    'success': True,
+                    'data': status,
+                    'error': None,
+                    'code': None
+                })
                 last_status = status.copy()
             plc_status_cache['status'] = status
             plc_status_cache['timestamp'] = _time.time()
@@ -127,7 +158,12 @@ def monitor_plc_status(socketio, plc, interval=5.0):
             if consecutive_errors >= max_errors:
                 logger.error(
                     f"[MONITOR] Emite evento 'plc_status_error' tras {consecutive_errors} fallos.")
-                socketio.emit('plc_status_error', {'error': str(e)})
+                socketio.emit('plc_status_error', {
+                    'success': False,
+                    'data': None,
+                    'error': str(e),
+                    'code': 'PLC_CONN_ERROR'
+                })
             _time.sleep(2)
             continue
         _time.sleep(interval)
