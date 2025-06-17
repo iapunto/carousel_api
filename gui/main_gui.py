@@ -467,7 +467,8 @@ class MainWindow:
         Actualiza la GUI con datos recibidos por WebSocket.
         """
         self.first_status_received = True
-        interpreted_status = interpretar_estado_plc(status_data['status_code'])
+        data = status_data.get('data', {})
+        interpreted_status = interpretar_estado_plc(data.get('status_code', 0))
         for key, label in self.status_labels.items():
             value = interpreted_status.get(key, "Desconocido")
             # Colores personalizados según el estado
@@ -482,7 +483,7 @@ class MainWindow:
                 # Blanco por defecto
                 label.configure(text=value, text_color="#FFFFFF")
         self.position_label.configure(
-            text=str(status_data['position']), text_color="#FFFFFF")
+            text=str(data.get('position', "---")), text_color="#FFFFFF")
         print(f"Estado actualizado (Socket.IO): {interpreted_status}")
 
     def show_ws_error(self, msg):
