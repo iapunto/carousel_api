@@ -75,8 +75,7 @@ def create_plc_instance(config):
 def monitor_plc_status(socketio, plc, interval=5.0):
     """
     Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
-    Ahora cierra la conexión tras cada consulta y el intervalo es de 5 segundos.
-    Se mantienen logs detallados para diagnóstico.
+    Ahora implementa reconexión automática y mantiene la conexión persistente.
     """
     import time as _time
     global plc_status_cache
@@ -84,6 +83,7 @@ def monitor_plc_status(socketio, plc, interval=5.0):
     last_status = None
     consecutive_errors = 0
     max_errors = 3
+    connected = False
     while True:
         try:
             logger.info("Consultando estado del PLC...")
@@ -91,11 +91,23 @@ def monitor_plc_status(socketio, plc, interval=5.0):
             if not acquired:
                 logger.warning(
                     "No se pudo adquirir el lock para consultar el PLC (ocupado por comando)")
+                _time.sleep(interval)
                 continue
             try:
+                # Intentar conectar si no está conectado
+                if not connected:
+                    socketio.emit('plc_reconnecting', {
+                                  'msg': 'Intentando reconectar al PLC...'})
+                    logger.info("Intentando reconectar al PLC...")
+                    if not plc.connect():
+                        raise RuntimeError("No se pudo reconectar al PLC")
+                    connected = True
+                    socketio.emit('plc_reconnected', {
+                                  'msg': 'Reconexión exitosa al PLC.'})
+                    logger.info("Reconexión exitosa al PLC.")
                 status = plc.get_current_status()
                 logger.info(f"Estado recibido: {status}")
-                plc.close()
+                # No cerrar la conexión aquí, solo si hay error grave
             finally:
                 plc_access_lock.release()
             if 'error' in status:
@@ -110,10 +122,14 @@ def monitor_plc_status(socketio, plc, interval=5.0):
         except Exception as e:
             logger.error(f"Error al consultar el PLC: {e}")
             consecutive_errors += 1
+            connected = False
             if consecutive_errors >= max_errors:
                 logger.error(
                     f"Emitiendo evento 'plc_status_error' tras {consecutive_errors} fallos.")
                 socketio.emit('plc_status_error', {'error': str(e)})
+            # Intentar reconectar tras un breve intervalo
+            _time.sleep(2)
+            continue
         _time.sleep(interval)
 
 
