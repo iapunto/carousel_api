@@ -24,8 +24,8 @@ ESTADOS_PLC = {
     "MODO_OPERACION": {
         "bit": 2,
         "descripcion": {
-            0: "Modo Manual",
-            1: "Modo Remoto"
+            0: "Modo Remoto",
+            1: "Modo Manual"
         }
     },
     "ALARMA": {
@@ -45,8 +45,8 @@ ESTADOS_PLC = {
     "VFD": {
         "bit": 5,
         "descripcion": {
-            0: "Error en el variador de velocidad",
-            1: "El variador de velocidad está OK"
+            0: "El variador de velocidad está OK",
+            1: "Error en el variador de velocidad"
         }
     },
     "ERROR_POSICIONAMIENTO": {

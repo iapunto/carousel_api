@@ -470,14 +470,19 @@ class MainWindow:
         interpreted_status = interpretar_estado_plc(status_data['status_code'])
         for key, label in self.status_labels.items():
             value = interpreted_status.get(key, "Desconocido")
-            if value in ["OK", "Remoto", "Desactivada"]:
-                label.configure(text=value, text_color="green")
-            elif value in ["Activa", "Manual", "Fallo"]:
-                label.configure(text=value, text_color="red")
+            # Colores personalizados según el estado
+            if value in ["OK", "Remoto", "Desactivada", "El variador de velocidad está OK", "El equipo está listo para operar"]:
+                # Verde brillante
+                label.configure(text=value, text_color="#00FF00")
+            elif value in ["Fallo", "Activa", "Manual", "Error en el variador de velocidad", "Alarma activa", "El equipo no puede operar"]:
+                label.configure(text=value, text_color="#FF3333")  # Rojo
+            elif value in ["Sin parada de emergencia", "No hay alarma", "No hay error de posicionamiento"]:
+                label.configure(text=value, text_color="#FFD700")  # Amarillo
             else:
-                label.configure(text=value, text_color="black")
+                # Blanco por defecto
+                label.configure(text=value, text_color="#FFFFFF")
         self.position_label.configure(
-            text=str(status_data['position']), text_color="black")
+            text=str(status_data['position']), text_color="#FFFFFF")
         print(f"Estado actualizado (Socket.IO): {interpreted_status}")
 
     def show_ws_error(self, msg):
