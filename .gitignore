@@ -205,3 +205,8 @@ pyrightconfig.json
 
 # Plan de Acción
 PLAN_ACCION.md
+
+# Archivos de compilación
+build/
+dist/
+Installer_VerticalPIC.exe
