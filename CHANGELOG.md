@@ -12,3 +12,5 @@
 - Optimización del rendimiento.
 
 - Eliminados los métodos no utilizados move_to_position y receive_response en PLCSimulator (models/plc_simulator.py) como parte de la limpieza de código muerto para la versión 2.0.0.
+
+- Refactorizada la GUI (main_gui.py) para que consuma únicamente la API REST y elimine cualquier acceso directo al PLC. Ahora todos los comandos se envían vía HTTP a /v1/command.

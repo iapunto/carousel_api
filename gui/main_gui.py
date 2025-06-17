@@ -20,6 +20,7 @@ from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
 import socketio
+import requests
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -181,49 +182,41 @@ class MainWindow:
                     text="Desconectado", text_color="red")
 
     def send_test_command(self):
-        """Envía un comando al PLC para pruebas"""
-
+        """Envía un comando al PLC para pruebas usando la API REST"""
         if not self.command_handler.can_send_command():
             messagebox.showwarning(
                 "Bloqueado", "Espera 3 segundos antes de enviar otro comando.")
             return
-
         try:
-            # Verificar si el PLC está inicializado
-            if self.plc is None:
-                messagebox.showerror(
-                    "Error", "El PLC no está inicializado. Por favor, configure la conexión antes de enviar comandos.")
-                return
-
             # Obtener valores del formulario
             command = int(self.command_var.get())
             argument = int(self.argument_var.get())
-
             # Validar los valores
             if not (0 <= command <= 255):
                 messagebox.showerror(
                     "Error", "El comando debe estar entre 0 y 255.")
                 return
-
             if not (0 <= argument <= 255):
                 messagebox.showerror(
                     "Error", "El argumento debe estar entre 0 y 255.")
                 return
-
-            # Conectar al PLC y enviar el comando
-            if self.plc.connect():
-                try:
-                    self.plc.send_command(command, argument)
+            # Construir la URL de la API
+            api_port = self.config.get('api_port', 5000)
+            url = f"http://localhost:{api_port}/v1/command"
+            payload = {"command": command, "argument": argument}
+            try:
+                response = requests.post(url, json=payload, timeout=5)
+                if response.status_code == 200:
                     self.command_handler.send_command(command, argument)
                     messagebox.showinfo(
                         "Éxito", f"Comando {command} enviado con argumento {argument}.")
-                except Exception as e:
+                else:
+                    error_msg = response.json().get('error', 'Error desconocido')
                     messagebox.showerror(
-                        "Error", f"No se pudo enviar el comando: {str(e)}")
-                finally:
-                    self.plc.close()
-            else:
-                messagebox.showerror("Error", "No se pudo conectar al PLC.")
+                        "Error", f"No se pudo enviar el comando: {error_msg}")
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"No se pudo enviar el comando: {str(e)}")
         except ValueError:
             messagebox.showerror(
                 "Error", "Los valores deben ser números enteros.")
