@@ -11,6 +11,7 @@ Fecha: 2024-09-27
 import random
 import time
 import logging
+from commons.utils import validar_comando, validar_argumento
 
 
 class PLCSimulator:
@@ -78,10 +79,9 @@ class PLCSimulator:
         Returns:
             Diccionario con estado y posición simulados.
         """
-        if not (0 <= command <= 255):
-            raise ValueError("Comando fuera de rango (0-255)")
-        if argument is not None and not (0 <= argument <= 255):
-            raise ValueError("Argumento fuera de rango (0-255)")
+        validar_comando(command)
+        if argument is not None:
+            validar_argumento(argument)
         try:
             self.logger.info(
                 f"Comando recibido en el simulador: {command}, Argumento: {argument}")

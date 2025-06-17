@@ -147,7 +147,7 @@ python -m unittest discover -s tests
 ## Créditos
 
 - Industrias Pico S.A.S
-- IA Punto: Soluciones Integrales de Tecnología y Marketing
+- IA Punto: Soluciones Tecnológicas y Marketing
 
 ---
 

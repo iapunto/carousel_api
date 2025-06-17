@@ -87,3 +87,61 @@ def interpretar_estado_plc(status_code):
         estados_activos[estado] = detalles["descripcion"][valor_bit]
 
     return estados_activos
+<<<<<<< HEAD
+=======
+
+
+def determinar_bandera(estado, valor_bit):
+    """
+    Determina el estado basándose en su descripción.
+
+    Args:
+        estado (str): Nombre del estado (por ejemplo, "ALARMA").
+        valor_bit (int): Valor del bit correspondiente al estado.
+
+    Returns:
+        str: Descripción específica del estado.
+    """
+    if estado == "READY":
+        return "OK" if valor_bit == 1 else "Inactivo"
+    elif estado == "RUN":
+        return "Moviendose" if valor_bit == 1 else "Parado"
+    elif estado == "MODO_OPERACION":
+        return "Manual" if valor_bit == 0 else "Remoto"
+    elif estado == "ALARMA":
+        return "Activa" if valor_bit == 1 else "Sin Alarma"
+    elif estado == "PARADA_EMERGENCIA":
+        return "Desactivada" if valor_bit == 1 else "Presionada"
+    elif estado == "VFD":
+        return "Fallo" if valor_bit == 1 else "OK"
+    elif estado == "ERROR_POSICIONAMIENTO":
+        return "Fallo" if valor_bit == 1 else "OK"
+
+
+def validar_comando(command):
+    """
+    Valida que el comando sea un entero entre 0 y 255.
+    Args:
+        command (int): Comando a validar.
+    Raises:
+        ValueError: Si el comando no es entero o está fuera de rango.
+    """
+    if not isinstance(command, int):
+        raise ValueError("El comando debe ser un entero.")
+    if not (0 <= command <= 255):
+        raise ValueError("Comando fuera de rango (0-255)")
+
+
+def validar_argumento(argument):
+    """
+    Valida que el argumento sea un entero entre 0 y 255.
+    Args:
+        argument (int): Argumento a validar.
+    Raises:
+        ValueError: Si el argumento no es entero o está fuera de rango.
+    """
+    if not isinstance(argument, int):
+        raise ValueError("El argumento debe ser un entero.")
+    if not (0 <= argument <= 255):
+        raise ValueError("Argumento fuera de rango (0-255)")
+>>>>>>> ac18826 (refactor: Centralización de validaciones de comandos y argumentos en utilidades. Se elimina duplicidad y se refuerza la robustez en PLC, PLCSimulator y CarouselController. Validaciones de rango y tipo ahora en commons/utils.py. Refs #plan_accion, #refactorizacion)

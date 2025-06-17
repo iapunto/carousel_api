@@ -11,6 +11,7 @@ import struct
 import time
 import logging
 import random
+from commons.utils import validar_comando, validar_argumento
 
 
 class PLC:
@@ -87,13 +88,11 @@ class PLC:
         """
         Envía un comando al PLC con reintentos y backoff exponencial.
         """
-        if not (0 <= command <= 255):
-            raise ValueError("Comando debe ser entre 0-255")
-        if argument is not None and not (0 <= argument <= 255):
-            raise ValueError("Argumento debe ser entre 0-255")
+        validar_comando(command)
+        if argument is not None:
+            validar_argumento(argument)
         if not self.sock:
             raise RuntimeError("No hay conexión activa con el PLC")
-
         for attempt in range(1, self.max_retries + 1):
             try:
                 data = struct.pack('B', command)
