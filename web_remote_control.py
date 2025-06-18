@@ -96,6 +96,9 @@ def index():
 def move():
     data = request.get_json()
     pos = data.get("position")
+    # Validar que solo se acepten valores 0-5 (cangilones 1-6)
+    if not isinstance(pos, int) or pos < 0 or pos > 5:
+        return jsonify(success=False, error="Solo se permiten cangilones del 1 al 6"), 400
     try:
         # Enviar comando 1 (mover) a la API REST
         resp = requests.post(
