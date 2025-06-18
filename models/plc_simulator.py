@@ -152,6 +152,17 @@ class PLCSimulator:
             'position': self.current_position
         }
 
+    def receive_response(self) -> dict:
+        """
+        Simula la recepción de una respuesta del PLC (para compatibilidad con el controlador real).
+        """
+        # Simula una respuesta estándar
+        return {
+            'status_code': self.status_code,
+            'position': self.current_position,
+            'raw_bytes': [self.status_code, self.current_position]
+        }
+
     def __enter__(self):
         """Permite uso con 'with' para gestión automática de recursos en el simulador"""
         self.connect()

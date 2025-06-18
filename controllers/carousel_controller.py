@@ -14,6 +14,17 @@ from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from commons.utils import interpretar_estado_plc, validar_comando, validar_argumento
 import time
 import logging
+from logging.handlers import RotatingFileHandler
+
+# Configuración de bitácora de operaciones
+operations_logger = logging.getLogger("operations")
+if not operations_logger.hasHandlers():
+    handler = RotatingFileHandler(
+        "operations.log", maxBytes=500_000, backupCount=5, encoding="utf-8")
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    handler.setFormatter(formatter)
+    operations_logger.addHandler(handler)
+    operations_logger.setLevel(logging.INFO)
 
 
 class CarouselController:
@@ -31,13 +42,14 @@ class CarouselController:
         self.plc = plc
         self.logger = logging.getLogger(__name__)
 
-    def send_command(self, command: int, argument: int = None) -> dict:
+    def send_command(self, command: int, argument: int = None, remote_addr=None) -> dict:
         """
-        Envía un comando al PLC y devuelve la respuesta procesada.
+        Envía un comando al PLC y registra en la bitácora de operaciones.
 
         Args:
             command: Código de comando (0-255)
             argument: Argumento opcional (0-255)
+            remote_addr: Dirección IP o proceso remoto
 
         Returns:
             Diccionario con estado y posición
@@ -46,6 +58,12 @@ class CarouselController:
             ValueError: Parámetros inválidos
             RuntimeError: Error de comunicación
         """
+        estado_antes = None
+        try:
+            if hasattr(self.plc, 'get_current_status'):
+                estado_antes = self.plc.get_current_status()
+        except Exception:
+            estado_antes = None
         validar_comando(command)
         if argument is not None:
             validar_argumento(argument)
@@ -69,6 +87,14 @@ class CarouselController:
             status = interpretar_estado_plc(response['status_code'])
             self.logger.info(
                 f"[PLC] Respuesta recibida: status_code={response['status_code']}, position={response['position']}")
+            estado_despues = None
+            try:
+                if hasattr(self.plc, 'get_current_status'):
+                    estado_despues = self.plc.get_current_status()
+            except Exception:
+                estado_despues = None
+            operations_logger.info(
+                f"[COMANDO] IP/Proceso: {remote_addr} | Comando: {command} | Argumento: {argument} | Resultado: OK | Estado antes: {estado_antes} | Estado después: {estado_despues}")
             return {
                 'status': status,
                 'position': response['position'],
@@ -77,6 +103,8 @@ class CarouselController:
         except Exception as e:
             self.logger.error(
                 f"[PLC] Error en send_command (comando={command}, argumento={argument}): {str(e)}")
+            operations_logger.error(
+                f"[COMANDO] IP/Proceso: {remote_addr} | Comando: {command} | Argumento: {argument} | Resultado: ERROR | Error: {str(e)} | Estado antes: {estado_antes}")
             raise RuntimeError(f"Fallo en comunicación PLC: {str(e)}")
 
     def get_current_status(self) -> dict:

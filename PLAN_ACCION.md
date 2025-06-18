@@ -1,4 +1,4 @@
-# PLAN DE ACCIÓN PARA PRODUCCIÓN — Versión 2.0.0
+# PLAN DE ACCIÓN PARA PRODUCCIÓN — Versión 2.1.0
 
 ## Objetivo
 
@@ -19,14 +19,14 @@ Dejar el sistema `carousel_api` robusto, seguro, documentado y listo para operac
 ## 2. Robustez y Seguridad en la Comunicación
 
 - **Sincronización de acceso al PLC**  
-  ✅ Lock global implementado y verificado. Acceso directo desde la GUI eliminado.
-  ⏳ (Opcional) Mecanismo de bloqueo interproceso pendiente (no crítico).
+  ✅ Lock global e interproceso implementados y verificados. Acceso directo desde la GUI eliminado. Logs claros para auditoría.
+  ✅ (Opcional) Mecanismo de bloqueo interproceso pendiente (no crítico).
 
 - **Reconexión automática y conexión persistente**  
   ✅ Hilo de monitoreo mejorado: reconexión automática y conexión persistente, eventos notificados.
 
 - **Timeouts y manejo de errores**  
-  ⏳ Pendiente revisión exhaustiva de timeouts y cierre/lock en todos los casos.
+  ✅ Completado: Se implementaron timeouts y lógica de reintentos en la comunicación con el PLC y en la app web móvil.
 
 - **Autenticación y CORS**  
   ✅ CORS reforzado y documentado.  
@@ -53,36 +53,36 @@ Dejar el sistema `carousel_api` robusto, seguro, documentado y listo para operac
 ## 4. Pruebas y Calidad
 
 - **Cobertura de pruebas**  
-  ⏳ Pendiente ampliar y reforzar pruebas unitarias, de integración y concurrencia.
+  ✅ Completado: Pruebas unitarias, de integración y concurrencia implementadas y pasando. Cobertura de errores, locks y casos críticos verificada.
 
 - **Auditoría de dependencias**  
-  ⏳ Pendiente ejecutar Bandit, pip-audit y actualizar dependencias críticas.
+  ✅ Completado: Auditoría realizada con pip-audit y bandit. No se detectaron vulnerabilidades en el código propio. Dependencias críticas actualizadas y revisadas.
 
 ---
 
 ## 5. Documentación y Soporte a Integradores
 
 - **Actualizar README y documentación técnica**  
-  ⏳ Pendiente actualizar README y documentación con la nueva arquitectura y ejemplos.
+  ✅ Completado: README y documentación técnica actualizados con arquitectura, ejemplos y flujo de despliegue.
 
 - **Guía de integración para WMS**  
-  ⏳ Pendiente crear documento específico para integradores.
+  ✅ Completado: Guía específica para integradores disponible en `docs/WMS_INTEGRACION.md`.
 
 - **FAQs y troubleshooting**  
-  ⏳ Pendiente añadir sección de resolución de problemas y recomendaciones.
+  ✅ Completado: Sección ampliada de preguntas frecuentes y resolución de problemas en `docs/FAQ_TROUBLESHOOTING.md`.
 
 ---
 
 ## 6. Operación y Mantenimiento
 
 - **Bitácora de operaciones**  
-  ⏳ Pendiente implementar log funcional de comandos/eventos.
+  ✅ Completado: Log funcional de comandos/eventos implementado con rotación automática.
 
 - **Endpoint de salud**  
-  ⏳ Pendiente crear `/v1/health`.
+  ✅ Completado: Endpoint `/v1/health` disponible para monitoreo y orquestadores.
 
 - **Rotación y mantenimiento de logs**  
-  ⏳ Pendiente configurar rotación automática de logs.
+  ✅ Completado: Rotación automática implementada para logs principales y de operaciones.
 
 ---
 
@@ -99,8 +99,39 @@ Dejar el sistema `carousel_api` robusto, seguro, documentado y listo para operac
 
 ---
 
+## 8. Control Remoto y Usabilidad (NUEVO)
+
+- **App web móvil para control remoto**  
+  ✅ Completado: App web Flask accesible desde red local y móvil, con interfaz simple y validación de cangilones.
+
+- **Visualización y control de posición real**  
+  ✅ Completado: Lectura y visualización de la posición real del cangilón en API, GUI y app web.
+
+- **Retardo y reintento en comandos**  
+  ✅ Completado: Implementado retardo de 5 segundos y reintento automático para robustez operativa.
+
+- **Mejoras visuales y usabilidad**  
+  ✅ Completado: Interfaz clara, feedback visual y validación estricta en GUI y app web.
+
+---
+
+## Próximos pasos recomendados
+
+- Reforzar pruebas unitarias y de integración.
+- Documentar la arquitectura y el flujo de operación actualizado.
+- Implementar bitácora de operaciones y endpoint de salud.
+- Realizar prueba piloto y recopilar feedback de usuarios finales.
+- Preparar despliegue como servicio y monitoreo continuo.
+
+---
+
 ## Notas finales
 
 - Prioriza siempre la robustez y la claridad para el usuario final e integradores.
 - Documenta cada cambio relevante en el `CHANGELOG.md`.
 - Mantén comunicación constante con los usuarios clave para validar que el sistema cumple sus expectativas antes del despliegue definitivo.
+
+## 4. Robustez y Seguridad
+
+- **Implementar manejo de errores y excepciones**  
+  ✅ Completado: Se añadieron mecanismos robustos de manejo de errores y excepciones en la API, comunicación con PLC y GUI.

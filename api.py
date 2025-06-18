@@ -21,6 +21,7 @@ from controllers.carousel_controller import CarouselController
 import time
 from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
 from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY, BAD_COMMAND, BAD_REQUEST, INTERNAL_ERROR
+from filelock import Timeout as FileLockTimeout
 
 
 def create_app(plc):
@@ -174,50 +175,84 @@ def create_app(plc):
                 'error': "El parámetro 'argument' debe ser un entero entre 0 y 255",
                 'code': BAD_COMMAND
             }), 400
-        # Bloqueo interproceso antes del lock global
-        interprocess_acquired = plc_interprocess_lock.acquire(timeout=2)
-        if not interprocess_acquired:
-            logger.warning(
-                f"[COMMAND] PLC ocupado por otro proceso para {request.remote_addr}")
-            return jsonify({
-                'success': False,
-                'data': None,
-                'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
-                'code': PLC_BUSY
-            }), 409
-        acquired = plc_access_lock.acquire(timeout=2)
-        if not acquired:
-            plc_interprocess_lock.release()
-            logger.warning(f"[COMMAND] PLC ocupado para {request.remote_addr}")
-            return jsonify({
-                'success': False,
-                'data': None,
-                'error': 'PLC ocupado, intente de nuevo en unos segundos',
-                'code': PLC_BUSY
-            }), 409
+        acquired_interprocess = False
+        acquired = False
         try:
             try:
-                logger.info(
-                    f"[COMMAND] Petición desde {request.remote_addr}, datos: {data}")
-                result = carousel_controller.send_command(command, argument)
-                logger.info(f"[COMMAND] Respuesta: {result}")
-                return jsonify({
-                    'success': True,
-                    'data': result,
-                    'error': None,
-                    'code': None
-                }), 200
-            except Exception as e:
-                logger.error(
-                    f"[COMMAND] Error para {request.remote_addr}, datos: {data}, error: {str(e)}")
+                interprocess_acquired = plc_interprocess_lock.acquire(
+                    timeout=2)
+                acquired_interprocess = interprocess_acquired
+            except FileLockTimeout:
+                logger.warning(
+                    f"[COMMAND] PLC ocupado (FileLockTimeout) por otro proceso para {request.remote_addr}")
                 return jsonify({
                     'success': False,
                     'data': None,
-                    'error': f'Error al procesar el comando: {str(e)}',
-                    'code': INTERNAL_ERROR
-                }), 500
+                    'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                }), 409
+            if not acquired_interprocess:
+                logger.warning(
+                    f"[COMMAND] PLC ocupado por otro proceso para {request.remote_addr}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                }), 409
+            acquired = plc_access_lock.acquire(timeout=2)
+            if not acquired:
+                if acquired_interprocess:
+                    plc_interprocess_lock.release()
+                logger.warning(
+                    f"[COMMAND] PLC ocupado para {request.remote_addr}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                }), 409
+            logger.info(
+                f"[COMMAND] Petición desde {request.remote_addr}, datos: {data}")
+            result = carousel_controller.send_command(
+                command, argument, remote_addr=request.remote_addr)
+            logger.info(f"[COMMAND] Respuesta: {result}")
+            return jsonify({
+                'success': True,
+                'data': result,
+                'error': None,
+                'code': None
+            }), 200
+        except Exception as e:
+            logger.error(
+                f"[COMMAND] Error para {request.remote_addr}, datos: {data}, error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': f'Error al procesar el comando: {str(e)}',
+                'code': INTERNAL_ERROR
+            }), 500
         finally:
-            plc_access_lock.release()
-            plc_interprocess_lock.release()
+            if acquired:
+                plc_access_lock.release()
+            if acquired_interprocess:
+                plc_interprocess_lock.release()
+
+    @app.route('/v1/health', methods=['GET'])
+    def health():
+        """
+        Endpoint de salud para monitoreo y orquestadores.
+        """
+        import datetime
+        plc_ok = False
+        try:
+            plc_ok = plc.connect()
+        except Exception:
+            plc_ok = False
+        return jsonify({
+            'success': True,
+            'plc_connected': plc_ok,
+            'timestamp': datetime.datetime.now().isoformat()
+        }), 200
 
     return app

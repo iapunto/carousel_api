@@ -1,3 +1,4 @@
+from logging.handlers import RotatingFileHandler
 from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY
 from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
 import sys
@@ -263,3 +264,11 @@ if __name__ == "__main__":
     app_gui = MainWindow(root, plc, config)
     root.mainloop()
     backend_process.terminate()
+
+# Configuración de logging global con rotación
+log_handler = RotatingFileHandler(
+    "carousel_api.log", maxBytes=1_000_000, backupCount=5, encoding="utf-8")
+log_formatter = logging.Formatter(
+    '%(asctime)s %(levelname)s %(name)s %(message)s')
+log_handler.setFormatter(log_formatter)
+logging.basicConfig(level=logging.INFO, handlers=[log_handler])
