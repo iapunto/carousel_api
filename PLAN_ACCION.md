@@ -1,4 +1,4 @@
-# PLAN DE ACCIÓN PARA PRODUCCIÓN — Versión 2.1.0
+# PLAN DE ACCIÓN PARA PRODUCCIÓN — Versión 2.2.1
 
 ## Objetivo
 
@@ -20,7 +20,7 @@ Dejar el sistema `carousel_api` robusto, seguro, documentado y listo para operac
 
 - **Sincronización de acceso al PLC**  
   ✅ Lock global e interproceso implementados y verificados. Acceso directo desde la GUI eliminado. Logs claros para auditoría.
-  ✅ (Opcional) Mecanismo de bloqueo interproceso pendiente (no crítico).
+  ⏳ (Opcional) Mecanismo de bloqueo interproceso avanzado pendiente (no crítico).
 
 - **Reconexión automática y conexión persistente**  
   ✅ Hilo de monitoreo mejorado: reconexión automática y conexión persistente, eventos notificados.
@@ -57,6 +57,7 @@ Dejar el sistema `carousel_api` robusto, seguro, documentado y listo para operac
 
 - **Auditoría de dependencias**  
   ✅ Completado: Auditoría realizada con pip-audit y bandit. No se detectaron vulnerabilidades en el código propio. Dependencias críticas actualizadas y revisadas.
+  ⏳ Auditoría periódica recomendada tras cada despliegue o actualización de dependencias.
 
 ---
 
@@ -89,17 +90,17 @@ Dejar el sistema `carousel_api` robusto, seguro, documentado y listo para operac
 ## 7. Validación final y despliegue
 
 - **Prueba piloto**  
-  ⏳ Pendiente realizar prueba completa en entorno controlado.
+  ✅ Realizada satisfactoriamente en entorno real. Resultados positivos.
 
 - **Feedback y ajustes**  
-  ⏳ Pendiente recopilar feedback y realizar ajustes.
+  ✅ Feedback de usuarios finales recopilado. Solo observaciones menores y no críticas pendientes de revisión.
 
 - **Despliegue en producción**  
-  ⏳ Pendiente instalar como servicio y verificar operación continua.
+  ✅ Instalador probado y funcionando correctamente. Servicio se inicia y opera según lo esperado.
 
 ---
 
-## 8. Control Remoto y Usabilidad (NUEVO)
+## 8. Control Remoto y Usabilidad
 
 - **App web móvil para control remoto**  
   ✅ Completado: App web Flask accesible desde red local y móvil, con interfaz simple y validación de cangilones.
@@ -117,19 +118,20 @@ Dejar el sistema `carousel_api` robusto, seguro, documentado y listo para operac
 
 ## Próximos pasos recomendados
 
-- Reforzar pruebas unitarias y de integración.
-- Documentar la arquitectura y el flujo de operación actualizado.
-- Implementar bitácora de operaciones y endpoint de salud.
-- Realizar prueba piloto y recopilar feedback de usuarios finales.
-- Preparar despliegue como servicio y monitoreo continuo.
+- Revisar y atender observaciones menores detectadas tras el despliegue.
+- Realizar seguimiento post-producción para asegurar operación continua.
+- Mantener la documentación técnica y de integración actualizada.
+- Documentar cada cambio relevante en el `CHANGELOG.md`.
+- Realizar auditoría de dependencias tras cada actualización relevante.
 
 ---
 
 ## Notas finales
 
+- El sistema está en operación continua y documentado.
 - Prioriza siempre la robustez y la claridad para el usuario final e integradores.
-- Documenta cada cambio relevante en el `CHANGELOG.md`.
-- Mantén comunicación constante con los usuarios clave para validar que el sistema cumple sus expectativas antes del despliegue definitivo.
+- Mantén comunicación constante con los usuarios clave para validar que el sistema cumple sus expectativas y necesidades.
+- Consulta y actualiza la documentación en `docs/` y el `README.md` tras cada cambio relevante.
 
 ## 4. Robustez y Seguridad
 
