@@ -380,6 +380,10 @@ class MainWindow:
         ctk.CTkButton(config_frame, text="Guardar", command=self.save_config).grid(
             row=5, column=0, columnspan=2, pady=10)
 
+        # Botón para desplegar la app web
+        ctk.CTkButton(config_frame, text="Desplegar control web", command=self.launch_web_app, fg_color="#007bff", hover_color="#0056b3").grid(
+            row=6, column=0, columnspan=2, pady=10)
+
     def save_config(self):
         """Guarda la configuración IP/puerto en config.json"""
         try:
@@ -514,3 +518,29 @@ class MainWindow:
             self.sio.disconnect()
         if self.sio_thread:
             self.sio_thread.join(timeout=2)
+
+    def launch_web_app(self):
+        """Lanza la app web en un proceso aparte si no está corriendo."""
+        import subprocess
+        import psutil
+        import webbrowser
+        # Verificar si ya está corriendo en el puerto 8181
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if any('web_remote_control.py' in str(arg) for arg in proc.info['cmdline']):
+                    messagebox.showinfo(
+                        "Control web", "La app web ya está en ejecución.")
+                    webbrowser.open_new_tab("http://localhost:8181/")
+                    return
+            except Exception:
+                continue
+        # Lanzar la app web
+        try:
+            subprocess.Popen([sys.executable, resource_path(
+                'web_remote_control.py')], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            messagebox.showinfo(
+                "Control web", "La app web se está desplegando en http://localhost:8181/")
+            webbrowser.open_new_tab("http://localhost:8181/")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"No se pudo lanzar la app web: {str(e)}")
