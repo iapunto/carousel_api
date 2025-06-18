@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.2.1
+
+- Despliegue y pruebas reales satisfactorias en entorno productivo.
+- Instalador y servicio verificados, operación continua confirmada.
+- Documentación y procesos actualizados.
+- Solo quedan observaciones menores y seguimiento post-producción.
+
 ## v2.5.36
 
 - Corrección de errores en la interfaz gráfica.

@@ -14,7 +14,7 @@
 
 ## Descripción general
 
-**carousel_api** es un sistema robusto para el control de un carrusel industrial mediante PLC Delta AS Series, con:
+**carousel_api** es un sistema robusto y en operación continua para el control de un carrusel industrial mediante PLC Delta AS Series, con:
 
 - **API RESTful** en Python (Flask)
 - **GUI local** (Python + customtkinter)
@@ -23,6 +23,7 @@
 - **Mecanismos de bloqueo global e interproceso** para máxima seguridad y concurrencia
 - **Pruebas unitarias, integración y concurrencia**
 - **Auditoría de dependencias y seguridad automatizada**
+- **Documentación y procesos actualizados**
 
 ---
 
@@ -161,7 +162,7 @@ Respuesta:
 - Mantén las dependencias actualizadas y ejecuta auditorías periódicas.
 - Documenta cada cambio relevante en el `CHANGELOG.md`.
 - Consulta el `PLAN_ACCION.md` para seguimiento detallado del proyecto.
-- Para integración avanzada (WMS), consulta la guía específica en `/docs/` (si existe).
+- Para integración avanzada (WMS), consulta la guía específica en `/docs/`.
 
 ---
 

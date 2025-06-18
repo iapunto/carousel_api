@@ -49,7 +49,6 @@
 | Comando no ejecuta (sin error)           | PLC ocupado, lock no liberado         | Espera y reintenta, revisa logs       |
 | Estado no cambia tras comando            | PLC no responde, error de hardware    | Revisa logs, consulta técnico         |
 | App web no accede a la API               | CORS, firewall, red                   | Ajusta CORS, revisa firewall/red      |
-| Error de seguridad en auditoría          | Dependencia de terceros               | Actualiza dependencias, revisa changelog |
 | Logs no rotan y crecen mucho             | Falta rotación automática             | Configura rotación en logging         |
 
 ---
