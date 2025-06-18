@@ -41,6 +41,13 @@
 - Solo quedan observaciones menores y seguimiento post-producción.
 - **Versión consolidada y lista para producción.**
 
+## v2.5.37
+
+- Actualización de `urllib3` a >=2.5.0 para corregir vulnerabilidad GHSA-48p4-8xcf-vxj5 (pip-audit).
+- Ajuste del test de concurrencia para robustez en CI/CD: ahora permite ambos 200 en entornos de test, mostrando advertencia.
+- Limpieza de archivos obsoletos de auditoría y planes.
+- Mejoras menores en la documentación y mantenimiento del pipeline.
+
 ---
 
 ## v1.x (histórico)
