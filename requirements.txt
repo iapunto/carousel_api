@@ -19,3 +19,4 @@ twisted==24.7.0rc1
 urllib3==2.2.2
 pytest
 pytest-cov
+filelock>=3.18.0

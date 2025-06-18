@@ -6,9 +6,13 @@ Fecha: 2024-09-27
 Uso de CustomTkinter para mejorar el aspecto visual.
 """
 
+import json as jsonlib
+import websocket
+import time
+from controllers.command_handler import CommandHandler
 import os
 import sys
-import customtkinter as ctk  # Importar CustomTkinter [[1]]
+import customtkinter as ctk  # Importar CustomTkinter
 from tkinter import messagebox, simpledialog
 import json
 import threading
@@ -16,7 +20,7 @@ from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
 import socketio
-import json as jsonlib
+import requests
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -54,6 +58,9 @@ class MainWindow:
             plc: Instancia de PLC (real o simulador)
             config: Diccionario con configuración (IP/puerto)
         """
+
+        self.command_handler = CommandHandler()
+
         self.root = root
         self.plc = plc
         self.config = config
@@ -74,9 +81,7 @@ class MainWindow:
             "simulator_enabled", False))  # Estado del modo desarrollo
 
         # Variables de control
-        # Valor predeterminado para el comando
         self.command_var = ctk.StringVar(value="1")
-        # Valor predeterminado para el argumento
         self.argument_var = ctk.StringVar(value="3")
 
         self.first_status_received = False
@@ -87,7 +92,7 @@ class MainWindow:
         # Crear pestañas
         self.create_tabs()
 
-        # Iniciar monitoreo en segundo plano
+        # Mostrar mensaje de espera
         self.show_waiting_message()
 
         # Configurar minimización al área de notificaciones
@@ -164,6 +169,7 @@ class MainWindow:
         """
         Actualiza el indicador visual y la etiqueta de conexión.
         """
+        self.ws_connected = connected
         if connected:
             self._draw_connection_circle("green")
             if self.connection_label:
@@ -176,7 +182,11 @@ class MainWindow:
                     text="Desconectado", text_color="red")
 
     def send_test_command(self):
-        """Envía un comando al PLC para pruebas"""
+        """Envía un comando al PLC para pruebas usando la API REST"""
+        if not self.command_handler.can_send_command():
+            messagebox.showwarning(
+                "Bloqueado", "Espera 3 segundos antes de enviar otro comando.")
+            return
         try:
             # Verificar si el PLC está inicializado
             if self.plc is None:
@@ -187,31 +197,32 @@ class MainWindow:
             # Obtener valores del formulario
             command = int(self.command_var.get())
             argument = int(self.argument_var.get())
-
             # Validar los valores
             if not (0 <= command <= 255):
                 messagebox.showerror(
                     "Error", "El comando debe estar entre 0 y 255.")
                 return
-
             if not (0 <= argument <= 255):
                 messagebox.showerror(
                     "Error", "El argumento debe estar entre 0 y 255.")
                 return
-
-            # Conectar al PLC y enviar el comando
-            if self.plc.connect():
-                try:
-                    self.plc.send_command(command, argument)
+            # Construir la URL de la API
+            api_port = self.config.get('api_port', 5000)
+            url = f"http://localhost:{api_port}/v1/command"
+            payload = {"command": command, "argument": argument}
+            try:
+                response = requests.post(url, json=payload, timeout=5)
+                if response.status_code == 200:
+                    self.command_handler.send_command(command, argument)
                     messagebox.showinfo(
                         "Éxito", f"Comando {command} enviado con argumento {argument}.")
-                except Exception as e:
+                else:
+                    error_msg = response.json().get('error', 'Error desconocido')
                     messagebox.showerror(
-                        "Error", f"No se pudo enviar el comando: {str(e)}")
-                finally:
-                    self.plc.close()
-            else:
-                messagebox.showerror("Error", "No se pudo conectar al PLC.")
+                        "Error", f"No se pudo enviar el comando: {error_msg}")
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"No se pudo enviar el comando: {str(e)}")
         except ValueError:
             messagebox.showerror(
                 "Error", "Los valores deben ser números enteros.")
@@ -375,6 +386,17 @@ class MainWindow:
         ctk.CTkButton(config_frame, text="Guardar", command=self.save_config).grid(
             row=5, column=0, columnspan=2, pady=10)
 
+        # Botón para desplegar la app web
+        ctk.CTkButton(config_frame, text="Desplegar control web", command=self.launch_web_app, fg_color="#007bff", hover_color="#0056b3").grid(
+            row=6, column=0, columnspan=2, pady=10)
+
+        # Botón para instalar el servicio de la App Web
+        ctk.CTkButton(config_frame, text="Instalar servicio App Web", command=self.install_webapp_service, fg_color="#28a745", hover_color="#1e7e34").grid(
+            row=7, column=0, pady=10)
+        # Botón para desinstalar el servicio de la App Web
+        ctk.CTkButton(config_frame, text="Desinstalar servicio App Web", command=self.uninstall_webapp_service, fg_color="#dc3545", hover_color="#a71d2a").grid(
+            row=7, column=1, pady=10)
+
     def save_config(self):
         """Guarda la configuración IP/puerto en config.json"""
         try:
@@ -454,7 +476,6 @@ class MainWindow:
                     import time
                     time.sleep(5)
 
-        import threading
         self.sio_thread = threading.Thread(target=sio_thread_func, daemon=True)
         self.sio_thread.start()
 
@@ -463,17 +484,25 @@ class MainWindow:
         Actualiza la GUI con datos recibidos por WebSocket.
         """
         self.first_status_received = True
-        interpreted_status = interpretar_estado_plc(status_data['status_code'])
+        data = status_data.get('data', {})
+        interpreted_status = interpretar_estado_plc(data.get('status_code', 0))
         for key, label in self.status_labels.items():
             value = interpreted_status.get(key, "Desconocido")
-            if value in ["OK", "Remoto", "Desactivada"]:
-                label.configure(text=value, text_color="green")
-            elif value in ["Activa", "Manual", "Fallo"]:
-                label.configure(text=value, text_color="red")
+            # Colores personalizados según el estado
+            if value in ["OK", "Remoto", "Desactivada", "El variador de velocidad está OK", "El equipo está listo para operar"]:
+                # Verde brillante
+                label.configure(text=value, text_color="#00FF00")
+            elif value in ["Fallo", "Activa", "Manual", "Error en el variador de velocidad", "Alarma activa", "El equipo no puede operar"]:
+                label.configure(text=value, text_color="#FF3333")  # Rojo
+            elif value in ["Sin parada de emergencia", "No hay alarma", "No hay error de posicionamiento"]:
+                label.configure(text=value, text_color="#FFD700")  # Amarillo
             else:
-                label.configure(text=value, text_color="black")
+                # Blanco por defecto
+                label.configure(text=value, text_color="#FFFFFF")
         self.position_label.configure(
-            text=str(status_data['position']), text_color="black")
+            text=str(data.get('position', "---")), text_color="#FFFFFF")
+        print(f"[DEBUG] status_data recibido: {status_data}")
+        print(f"[DEBUG] data['position']: {data.get('position')}")
         print(f"Estado actualizado (Socket.IO): {interpreted_status}")
 
     def show_ws_error(self, msg):
@@ -502,3 +531,57 @@ class MainWindow:
             self.sio.disconnect()
         if self.sio_thread:
             self.sio_thread.join(timeout=2)
+
+    def launch_web_app(self):
+        """Lanza la app web en un proceso aparte si no está corriendo."""
+        import subprocess
+        import psutil
+        import webbrowser
+        # Verificar si ya está corriendo en el puerto 8181
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if any('web_remote_control.py' in str(arg) for arg in proc.info['cmdline']):
+                    messagebox.showinfo(
+                        "Control web", "La app web ya está en ejecución.")
+                    webbrowser.open_new_tab("http://localhost:8181/")
+                    return
+            except Exception:
+                continue
+        # Lanzar la app web
+        try:
+            subprocess.Popen([sys.executable, resource_path(
+                'web_remote_control.py')], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            messagebox.showinfo(
+                "Control web", "La app web se está desplegando en http://localhost:8181/")
+            webbrowser.open_new_tab("http://localhost:8181/")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"No se pudo lanzar la app web: {str(e)}")
+
+    def install_webapp_service(self):
+        """Ejecuta el script batch para instalar el servicio de la App Web."""
+        import subprocess
+        import os
+        script_path = os.path.join(os.path.dirname(
+            __file__), '..', 'tools', 'install_webapp_service.bat')
+        try:
+            subprocess.Popen([script_path], shell=True)
+            messagebox.showinfo(
+                "Servicio App Web", "Se está instalando el servicio de la App Web. Sigue las instrucciones en la ventana que aparece.")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"No se pudo instalar el servicio: {str(e)}")
+
+    def uninstall_webapp_service(self):
+        """Ejecuta el script batch para desinstalar el servicio de la App Web."""
+        import subprocess
+        import os
+        script_path = os.path.join(os.path.dirname(
+            __file__), '..', 'tools', 'uninstall_webapp_service.bat')
+        try:
+            subprocess.Popen([script_path], shell=True)
+            messagebox.showinfo(
+                "Servicio App Web", "Se está desinstalando el servicio de la App Web. Sigue las instrucciones en la ventana que aparece.")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"No se pudo desinstalar el servicio: {str(e)}")

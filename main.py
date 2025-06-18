@@ -1,23 +1,33 @@
-from plc_cache import plc_status_cache, plc_access_lock
-import sys
-import time
-import socket
-import multiprocessing
-import copy
-from flask_socketio import SocketIO
-import eventlet.green.threading as threading
-import eventlet
-import logging
-from gui.main_gui import MainWindow  # Interfaz gráfica
-from models.plc import PLC  # Importa PLC real
-from api import create_app  # Importa la API [[3]]
-import threading
-import json
-from tkinter import ttk, messagebox
 import tkinter as tk
+from tkinter import ttk, messagebox
+import json
+import threading
+from api import create_app  # Importa la API [[3]]
+from models.plc import PLC  # Importa PLC real
+from gui.main_gui import MainWindow  # Interfaz gráfica
+import logging
+import eventlet
+import eventlet.green.threading as threading
+from flask_socketio import SocketIO
+import copy
+import multiprocessing
+import socket
+import time
+from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
+from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY
+from logging.handlers import RotatingFileHandler
+import sys
 import os
+# Añade la ruta base del proyecto al sys.path para permitir imports de paquetes locales
+base_dir = os.path.dirname(os.path.abspath(__file__))
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
 os.environ["EVENTLET_NO_GREENDNS"] = "yes"
 sys.modules["eventlet.support.greendns"] = None
+site_packages = os.path.join(os.path.dirname(
+    __file__), 'python_portable', 'site-packages')
+if site_packages not in sys.path:
+    sys.path.insert(0, site_packages)
 
 """
 Aplicación de escritorio para control de carrusel industrial
@@ -26,7 +36,6 @@ Para: Industrias Pico S.A.S
 Fecha: 2024-09-27
 Actualizado: 2025-06-14
 """
-
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
@@ -75,8 +84,7 @@ def create_plc_instance(config):
 def monitor_plc_status(socketio, plc, interval=5.0):
     """
     Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
-    Ahora cierra la conexión tras cada consulta y el intervalo es de 5 segundos.
-    Se mantienen logs detallados para diagnóstico.
+    Ahora implementa reconexión automática y mantiene la conexión persistente.
     """
     import time as _time
     global plc_status_cache
@@ -84,36 +92,97 @@ def monitor_plc_status(socketio, plc, interval=5.0):
     last_status = None
     consecutive_errors = 0
     max_errors = 3
+    connected = False
     while True:
         try:
-            logger.info("Consultando estado del PLC...")
+            logger.info("[MONITOR] Consultando estado del PLC...")
+            # Bloqueo interproceso antes del lock global
+            interprocess_acquired = plc_interprocess_lock.acquire(timeout=2)
+            if not interprocess_acquired:
+                logger.warning(
+                    "[MONITOR] PLC ocupado por otro proceso (interproceso)")
+                socketio.emit('plc_status_error', {
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                })
+                _time.sleep(interval)
+                continue
             acquired = plc_access_lock.acquire(timeout=2)
             if not acquired:
+                plc_interprocess_lock.release()
                 logger.warning(
-                    "No se pudo adquirir el lock para consultar el PLC (ocupado por comando)")
+                    "[MONITOR] No se pudo adquirir el lock para consultar el PLC (ocupado por comando)")
+                socketio.emit('plc_status_error', {
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                })
+                _time.sleep(interval)
                 continue
             try:
+                if not connected:
+                    socketio.emit('plc_reconnecting', {
+                        'success': False,
+                        'data': None,
+                        'error': 'Intentando reconectar al PLC...',
+                        'code': PLC_CONN_ERROR
+                    })
+                    logger.info("[MONITOR] Intentando reconectar al PLC...")
+                    if not plc.connect():
+                        logger.error("[MONITOR] Fallo al reconectar al PLC.")
+                        socketio.emit('plc_status_error', {
+                            'success': False,
+                            'data': None,
+                            'error': 'No se pudo reconectar al PLC',
+                            'code': PLC_CONN_ERROR
+                        })
+                        raise RuntimeError("No se pudo reconectar al PLC")
+                    connected = True
+                    socketio.emit('plc_reconnected', {
+                        'success': True,
+                        'data': {'msg': 'Reconexión exitosa al PLC.'},
+                        'error': None,
+                        'code': None
+                    })
+                    logger.info("[MONITOR] Reconexión exitosa al PLC.")
                 status = plc.get_current_status()
-                logger.info(f"Estado recibido: {status}")
-                plc.close()
+                logger.info(f"[MONITOR] Estado recibido: {status}")
             finally:
                 plc_access_lock.release()
+                plc_interprocess_lock.release()
             if 'error' in status:
+                logger.error(
+                    f"[MONITOR] Error reportado por PLC: {status['error']}")
+                socketio.emit('plc_status_error', {
+                    'success': False,
+                    'data': None,
+                    'error': status['error'],
+                    'code': PLC_CONN_ERROR
+                })
                 raise RuntimeError(status['error'])
             if last_status is None or status != last_status:
-                logger.info(f"Emitiendo evento 'plc_status': {status}")
-                socketio.emit('plc_status', status)
-                last_status = status.copy()
-            plc_status_cache['status'] = status
-            plc_status_cache['timestamp'] = _time.time()
+                logger.info(f"[MONITOR] Emite evento 'plc_status': {status}")
+                socketio.emit('plc_status', {
+                    'success': True,
+                    'data': status,
+                    'error': None,
+                    'code': None
+                })
+                last_status = status
+                plc_status_cache.clear()
+                plc_status_cache.update(status)
             consecutive_errors = 0
         except Exception as e:
-            logger.error(f"Error al consultar el PLC: {e}")
+            logger.error(f"[MONITOR] Error en monitor_plc_status: {e}")
             consecutive_errors += 1
             if consecutive_errors >= max_errors:
-                logger.error(
-                    f"Emitiendo evento 'plc_status_error' tras {consecutive_errors} fallos.")
-                socketio.emit('plc_status_error', {'error': str(e)})
+                connected = False
+                logger.warning(
+                    f"[MONITOR] Se alcanzó el máximo de errores consecutivos ({max_errors}), se intentará reconectar.")
+            _time.sleep(interval)
         _time.sleep(interval)
 
 
@@ -195,3 +264,11 @@ if __name__ == "__main__":
     app_gui = MainWindow(root, plc, config)
     root.mainloop()
     backend_process.terminate()
+
+# Configuración de logging global con rotación
+log_handler = RotatingFileHandler(
+    "carousel_api.log", maxBytes=1_000_000, backupCount=5, encoding="utf-8")
+log_formatter = logging.Formatter(
+    '%(asctime)s %(levelname)s %(name)s %(message)s')
+log_handler.setFormatter(log_formatter)
+logging.basicConfig(level=logging.INFO, handlers=[log_handler])

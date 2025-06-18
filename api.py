@@ -11,13 +11,17 @@ Fecha: 2023-09-13
 """
 
 import os
+import logging
 from flask import Flask, jsonify, request, abort
 from flasgger import Swagger
 from flask_cors import CORS
+from commons.utils import interpretar_estado_plc
+from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from controllers.carousel_controller import CarouselController
 import time
-import logging
-from plc_cache import plc_status_cache, plc_access_lock
+from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
+from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY, BAD_COMMAND, BAD_REQUEST, INTERNAL_ERROR
+from filelock import Timeout
 
 
 def create_app(plc):
@@ -35,8 +39,13 @@ def create_app(plc):
     # Configuración de CORS segura
     allowed_origins = os.getenv(
         "API_ALLOWED_ORIGINS", "http://localhost, http://127.0.0.1, http://192.168.1.0/24, http://localhost:3000,http://localhost:5001,http://127.0.0.1:3000,http://127.0.0.1:5001").split(",")
-    allowed_origins = [o.strip() for o in allowed_origins]
+    allowed_origins = [o.strip()
+                       for o in allowed_origins if o.strip() and o.strip() != "*"]
+    if not allowed_origins:
+        raise RuntimeError(
+            "Por seguridad, debe definir orígenes permitidos en la variable de entorno API_ALLOWED_ORIGINS")
     CORS(app, resources={r"/*": {"origins": allowed_origins}})
+    # Documentación: Para producción, configure API_ALLOWED_ORIGINS solo con los dominios/autorizados.
 
     # Configuración de Swagger [[5]]
     app.config['SWAGGER'] = {
@@ -76,20 +85,37 @@ def create_app(plc):
                 schema:
                   type: object
                   properties:
-                    status_code:
-                      type: integer
-                      description: Código de estado (8 bits).
+                    status:
+                      type: object
+                      description: Estado interpretado del PLC.
                     position:
                       type: integer
                       description: Posición del carrusel (0-9).
+                    raw_status:
+                      type: integer
+                      description: Código de estado (8 bits).
           500:
             description: Error de comunicación.
         """
-        status = plc_status_cache.get('status')
-        if status is not None:
-            return jsonify(status), 200
-        else:
-            return jsonify({'error': 'Estado no disponible'}), 503
+        try:
+            logger.info(f"[STATUS] Petición desde {request.remote_addr}")
+            result = carousel_controller.get_current_status()
+            logger.info(f"[STATUS] Respuesta: {result}")
+            return jsonify({
+                'success': True,
+                'data': result,
+                'error': None,
+                'code': None
+            }), 200
+        except Exception as e:
+            logger.error(
+                f"[STATUS] Error para {request.remote_addr}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': f'Error de comunicación con el PLC: {str(e)}',
+                'code': PLC_CONN_ERROR
+            }), 500
 
     @app.route('/v1/command', methods=['POST'])
     def send_command():
@@ -120,29 +146,109 @@ def create_app(plc):
             description: Error interno.
         """
         if not request.is_json:
-            return jsonify({'error': 'Solicitud debe ser JSON'}), 400
+            logger.warning(
+                f"[COMMAND] Solicitud no JSON desde {request.remote_addr}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': 'Solicitud debe ser JSON',
+                'code': BAD_REQUEST
+            }), 400
         data = request.get_json()
         command = data.get('command')
         argument = data.get('argument')
-        if command is None:
-            return jsonify({'error': 'Falta el parámetro command'}), 400
-        acquired = plc_access_lock.acquire(timeout=2)
-        if not acquired:
-            return jsonify({'error': 'PLC ocupado, intente de nuevo en unos segundos'}), 409
+        if not isinstance(command, int) or not (0 <= command <= 255):
+            logger.warning(
+                f"[COMMAND] Parámetro 'command' inválido desde {request.remote_addr}, valor: {command}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': "El parámetro 'command' debe ser un entero entre 0 y 255",
+                'code': BAD_COMMAND
+            }), 400
+        if argument is not None and (not isinstance(argument, int) or not (0 <= argument <= 255)):
+            logger.warning(
+                f"[COMMAND] Parámetro 'argument' inválido desde {request.remote_addr}, valor: {argument}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': "El parámetro 'argument' debe ser un entero entre 0 y 255",
+                'code': BAD_COMMAND
+            }), 400
+        acquired_interprocess = False
+        acquired_global = False
         try:
-            if plc.connect():
-                try:
-                    plc.send_command(command, argument)
-                    time.sleep(0.5)
-                    response = plc.receive_response()
-                    plc.close()
-                    return jsonify(response), 200
-                except Exception as e:
-                    logger.error(f"Error en /v1/command: {str(e)}")
-                    return jsonify({'error': f'Error: {str(e)}'}), 500
-            else:
-                return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+            acquired_interprocess = plc_interprocess_lock.acquire(timeout=2)
+            if not acquired_interprocess:
+                logger.warning(
+                    f"[COMMAND] PLC ocupado por otro proceso (interproceso) desde {request.remote_addr}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                }), 409
+            acquired_global = plc_access_lock.acquire(timeout=2)
+            if not acquired_global:
+                logger.warning(
+                    f"[COMMAND] PLC ocupado (lock global) desde {request.remote_addr}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': 'PLC ocupado, intente de nuevo en unos segundos',
+                    'code': PLC_BUSY
+                }), 409
+            # Ejecutar el comando usando el controlador
+            result = carousel_controller.send_command(command, argument)
+            logger.info(f"[COMMAND] Respuesta: {result}")
+            if isinstance(result, dict) and result.get('error') == 'PLC en movimiento':
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': result['error'],
+                    'code': PLC_BUSY
+                }), 409
+            return jsonify({
+                'success': True,
+                'data': result,
+                'error': None,
+                'code': None
+            }), 200
+        except Timeout as e:
+            logger.warning(
+                f"[COMMAND] Timeout al adquirir lock interproceso para {request.remote_addr}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                'code': PLC_BUSY
+            }), 409
+        except Exception as e:
+            logger.error(
+                f"[COMMAND] Error para {request.remote_addr}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': f'Error al procesar el comando: {str(e)}',
+                'code': INTERNAL_ERROR
+            }), 500
         finally:
-            plc_access_lock.release()
+            if acquired_global:
+                plc_access_lock.release()
+            if acquired_interprocess:
+                plc_interprocess_lock.release()
+
+    @app.route('/v1/health', methods=['GET'])
+    def health():
+        """
+        Endpoint de salud para monitoreo y orquestadores.
+        ---
+        tags:
+          - Salud
+        responses:
+          200:
+            description: API operativa.
+        """
+        return jsonify({'status': 'ok'}), 200
 
     return app

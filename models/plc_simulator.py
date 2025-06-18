@@ -152,32 +152,6 @@ class PLCSimulator:
             'position': self.current_position
         }
 
-    def move_to_position(self, target: int) -> dict:
-        """
-        Mueve el carrusel a una posición específica.
-
-        Args:
-            target: Posición objetivo (0-9).
-
-        Returns:
-            Respuesta del PLC simulado.
-        """
-        if not (0 <= target <= 9):
-            raise ValueError("Posición debe estar entre 0-9")
-
-        if self.is_running:
-            return {'error': 'PLC en movimiento'}
-
-        self.is_running = True
-        self.status_code |= 0b00000010  # Enciende el bit RUN
-        print(f"Moviendo el carrusel a la posición {target}...")
-        time.sleep(2)  # Simula tiempo de movimiento
-        self.current_position = target
-        self.is_running = False
-        self.status_code &= 0b11111101  # Apaga el bit RUN
-
-        return {'status_code': self.status_code, 'position': self.current_position}
-
     def receive_response(self) -> dict:
         """
         Simula la recepción de una respuesta del PLC (status y posición).
