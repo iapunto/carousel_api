@@ -384,6 +384,13 @@ class MainWindow:
         ctk.CTkButton(config_frame, text="Desplegar control web", command=self.launch_web_app, fg_color="#007bff", hover_color="#0056b3").grid(
             row=6, column=0, columnspan=2, pady=10)
 
+        # Botón para instalar el servicio de la App Web
+        ctk.CTkButton(config_frame, text="Instalar servicio App Web", command=self.install_webapp_service, fg_color="#28a745", hover_color="#1e7e34").grid(
+            row=7, column=0, pady=10)
+        # Botón para desinstalar el servicio de la App Web
+        ctk.CTkButton(config_frame, text="Desinstalar servicio App Web", command=self.uninstall_webapp_service, fg_color="#dc3545", hover_color="#a71d2a").grid(
+            row=7, column=1, pady=10)
+
     def save_config(self):
         """Guarda la configuración IP/puerto en config.json"""
         try:
@@ -544,3 +551,31 @@ class MainWindow:
         except Exception as e:
             messagebox.showerror(
                 "Error", f"No se pudo lanzar la app web: {str(e)}")
+
+    def install_webapp_service(self):
+        """Ejecuta el script batch para instalar el servicio de la App Web."""
+        import subprocess
+        import os
+        script_path = os.path.join(os.path.dirname(
+            __file__), '..', 'tools', 'install_webapp_service.bat')
+        try:
+            subprocess.Popen([script_path], shell=True)
+            messagebox.showinfo(
+                "Servicio App Web", "Se está instalando el servicio de la App Web. Sigue las instrucciones en la ventana que aparece.")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"No se pudo instalar el servicio: {str(e)}")
+
+    def uninstall_webapp_service(self):
+        """Ejecuta el script batch para desinstalar el servicio de la App Web."""
+        import subprocess
+        import os
+        script_path = os.path.join(os.path.dirname(
+            __file__), '..', 'tools', 'uninstall_webapp_service.bat')
+        try:
+            subprocess.Popen([script_path], shell=True)
+            messagebox.showinfo(
+                "Servicio App Web", "Se está desinstalando el servicio de la App Web. Sigue las instrucciones en la ventana que aparece.")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"No se pudo desinstalar el servicio: {str(e)}")
