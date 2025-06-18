@@ -11,7 +11,7 @@ Fecha: 2024-09-27
 import random
 import time
 import logging
-from commons.utils import validar_comando, validar_argumento
+from commons.utils import validar_comando, validar_argumento, debug_print
 
 
 class PLCSimulator:
@@ -66,7 +66,7 @@ class PLCSimulator:
             data: Datos enviados al PLC.
         """
         self.sock._buffer += data
-        print(f"Datos simulados enviados al PLC: {data}")
+        debug_print(f"Datos simulados enviados al PLC: {data}")
 
     def send_command(self, command: int, argument: int = None) -> dict:
         """

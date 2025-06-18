@@ -18,6 +18,7 @@ from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY
 from logging.handlers import RotatingFileHandler
 import sys
 import os
+from commons.utils import debug_print
 # Añade la ruta base del proyecto al sys.path para permitir imports de paquetes locales
 base_dir = os.path.dirname(os.path.abspath(__file__))
 if base_dir not in sys.path:
@@ -52,7 +53,7 @@ def load_config():
         with open(CONFIG_FILE, "r") as f:
             config = json.load(f)
             # Punto de revisión [[6]]
-            print(f"Configuración cargada: {config}")
+            debug_print(f"Configuración cargada: {config}")
             return config
     return DEFAULT_CONFIG
 
@@ -61,7 +62,7 @@ config = load_config()
 plc_mode = "Simulador" if config.get(
     "simulator_enabled", False) else "PLC Real"
 # Punto de revisión [[6]]
-print(
+debug_print(
     f"Iniciando en modo: {plc_mode}, IP: {config['ip']}, Puerto: {config['port']}")
 
 if config.get("simulator_enabled", False):
@@ -197,11 +198,11 @@ def run_backend(config):
 
     def create_plc_instance(config):
         if config.get("simulator_enabled"):
-            print(
+            debug_print(
                 f"Iniciando en modo: Simulador, IP: {config['ip']}, Puerto: {config['port']}")
             return PLCSimulator(config["ip"], config["port"])
         else:
-            print(
+            debug_print(
                 f"Iniciando en modo: PLC real, IP: {config['ip']}, Puerto: {config['port']}")
             return PLC(config["ip"], config["port"])
 
@@ -245,15 +246,15 @@ if __name__ == "__main__":
         try:
             with socket.create_connection(("localhost", config.get("api_port", 5000)), timeout=1):
                 backend_ready = True
-                print(
+                debug_print(
                     f"Backend disponible en puerto {config.get('api_port', 5000)}. Lanzando GUI...")
                 break
         except (ConnectionRefusedError, OSError):
-            print(
+            debug_print(
                 f"Esperando a que el backend esté listo... (intento {i+1}/{max_retries})")
             time.sleep(1)
     if not backend_ready:
-        print(
+        debug_print(
             f"ERROR: El backend no respondió en el puerto {config.get('api_port', 5000)} tras {max_retries} segundos. Abortando.")
         backend_process.terminate()
         exit(1)

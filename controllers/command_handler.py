@@ -1,4 +1,5 @@
 import time
+from commons.utils import debug_print
 
 
 class CommandHandler:
@@ -14,7 +15,8 @@ class CommandHandler:
         """
         current_time = time.time()
         if current_time - self.last_command_time < self.lock_duration:
-            print("Bloqueado: Espera 3 segundos antes de enviar otro comando.")
+            debug_print(
+                "Bloqueado: Espera 3 segundos antes de enviar otro comando.")
             return False
         return True
 
@@ -31,10 +33,10 @@ class CommandHandler:
             return False
 
         try:
-            print(f"Enviando comando: {command}, Argumento: {argument}")
+            debug_print(f"Enviando comando: {command}, Argumento: {argument}")
             # Lógica para enviar el comando al PLC aquí
             self.last_command_time = time.time()  # Actualiza el tiempo del último comando
             return True
         except Exception as e:
-            print(f"Error al enviar el comando: {str(e)}")
+            debug_print(f"Error al enviar el comando: {str(e)}")
             return False

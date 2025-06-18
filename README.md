@@ -37,7 +37,7 @@
 
 ## 📦 Arquitectura
 
-```
+```md
 [GUI] <---Socket.IO---> [API Flask] <---TCP/IP---> [PLC Delta / Simulador]
 ```
 
@@ -107,6 +107,15 @@ Configura `config.json` según tu entorno (ver ejemplo en el archivo).
 - **No se almacenan credenciales sensibles** en texto plano.
 - **Manejo global de errores** y límites de payload.
 - **Documentación y código limpio** siguiendo PEP8 y buenas prácticas.
+
+---
+
+## 🛠️ Entornos y depuración
+
+- El comportamiento de logs y prints de depuración se controla mediante la variable de entorno `APP_ENV`:
+  - `APP_ENV=development`: Se muestran prints de depuración y logs detallados.
+  - `APP_ENV=production` (por defecto): Solo se muestran logs importantes, sin prints de depuración.
+- Usa la función `debug_print()` para mensajes de depuración que solo deben aparecer en desarrollo.
 
 ---
 

@@ -30,7 +30,7 @@ def load_config():
         with open(CONFIG_FILE, "r") as f:
             config = json.load(f)
             # Punto de revisión [[6]]
-            print(f"Configuración cargada: {config}")
+            debug_print(f"Configuración cargada: {config}")
             return config
     return DEFAULT_CONFIG
 
@@ -39,7 +39,7 @@ config = load_config()
 plc_mode = "Simulador" if config.get(
     "simulator_enabled", False) else "PLC Real"
 # Punto de revisión [[6]]
-print(
+debug_print(
     f"Iniciando en modo: {plc_mode}, IP: {config['ip']}, Puerto: {config['port']}")
 
 if config.get("simulator_enabled", False):
@@ -387,7 +387,7 @@ class PLC:
             self.sock.connect((self.ip, self.port))
             return True
         except (socket.timeout, ConnectionRefusedError) as e:
-            print(f"Error de conexión: {str(e)}")
+            debug_print(f"Error de conexión: {str(e)}")
             self.close()
             return False
 
@@ -479,7 +479,7 @@ class PLC:
             response = self.receive_response()
             return response
         except Exception as e:
-            print(f"Error al obtener el estado del PLC: {e}")
+            debug_print(f"Error al obtener el estado del PLC: {e}")
             return {"status_code": None, "position": None}
 
 
@@ -525,7 +525,7 @@ class PLCSimulator:
         Returns:
             True si la conexión es exitosa.
         """
-        print("Simulando conexión con el PLC...")
+        debug_print("Simulando conexión con el PLC...")
         self.sock = type('FakeSocket', (object,), {
             'sendall': self.simulated_sendall,
             '_buffer': b''  # Buffer interno para almacenar datos enviados
@@ -536,7 +536,7 @@ class PLCSimulator:
         """
         Simula el cierre de la conexión.
         """
-        print("Simulando cierre de conexión con el PLC...")
+        debug_print("Simulando cierre de conexión con el PLC...")
         self.sock = None
 
     def simulated_sendall(self, data: bytes):
@@ -547,7 +547,7 @@ class PLCSimulator:
             data: Datos enviados al PLC.
         """
         self.sock._buffer += data
-        print(f"Datos simulados enviados al PLC: {data}")
+        debug_print(f"Datos simulados enviados al PLC: {data}")
 
     def send_command(self, command: int, argument: int = None) -> dict:
         """
@@ -567,26 +567,26 @@ class PLCSimulator:
             raise ValueError("Argumento fuera de rango (0-9)")
 
         try:
-            print(
+            debug_print(
                 f"Comando recibido en el simulador: {command}, Argumento: {argument}")
             time.sleep(0.5)  # Simula latencia
 
             if command == 0:  # Comando STATUS
                 self.status_code = self.generate_status()
                 position = self.current_position
-                print(
+                debug_print(
                     f"Estado simulado: {self.status_code}, Posición: {position}")
                 return {'status_code': self.status_code, 'position': position}
 
             elif command == 1:  # Comando MUEVETE
                 if self.is_running:
-                    print("El carrusel ya está en movimiento. Ignorando el comando.")
+                    debug_print("El carrusel ya está en movimiento. Ignorando el comando.")
                     return {'error': 'PLC en movimiento'}
 
                 target_position = argument
                 self.is_running = True
                 self.status_code |= 0b00000010  # Enciende el bit RUN
-                print(
+                debug_print(
                     f"Moviendo el carrusel a la posición {target_position}...")
                 time.sleep(2)  # Simula tiempo de movimiento
                 self.current_position = target_position
@@ -601,7 +601,7 @@ class PLCSimulator:
                 return {'status_code': self.status_code, 'position': self.current_position}
 
         except Exception as e:
-            print(f"Error en simulador: {str(e)}")
+            debug_print(f"Error en simulador: {str(e)}")
             return {'error': str(e)}
 
     def generate_status(self) -> int:
@@ -660,7 +660,7 @@ class PLCSimulator:
 
         self.is_running = True
         self.status_code |= 0b00000010  # Enciende el bit RUN
-        print(f"Moviendo el carrusel a la posición {target}...")
+        debug_print(f"Moviendo el carrusel a la posición {target}...")
         time.sleep(2)  # Simula tiempo de movimiento
         self.current_position = target
         self.is_running = False
@@ -735,7 +735,7 @@ class MainWindow:
         if os.path.exists(icon_path):
             self.root.iconbitmap(icon_path)
         else:
-            print(f"No se encontró el archivo de ícono: {icon_path}")
+            debug_print(f"No se encontró el archivo de ícono: {icon_path}")
 
         self.root.geometry("400x500")
 
@@ -782,7 +782,7 @@ class MainWindow:
             logo_label.image = logo_tk  # Mantener una referencia para evitar que se elimine
             logo_label.pack(side="left", padx=30, pady=10)
         else:
-            print(f"No se encontró el archivo de logo: {logo_path}")
+            debug_print(f"No se encontró el archivo de logo: {logo_path}")
 
         # Botón de salir
         exit_button = ctk.CTkButton(
@@ -939,7 +939,7 @@ class MainWindow:
             status_data = self.plc.get_current_status()
 
             if status_data["status_code"] is None or status_data["position"] is None:
-                print("No se recibió respuesta válida del PLC.")
+                debug_print("No se recibió respuesta válida del PLC.")
                 return
 
             # Interpretar estado
@@ -952,7 +952,7 @@ class MainWindow:
                 label.configure(text=value)
 
         except Exception as e:
-            print(f"Error al actualizar estado: {str(e)}")
+            debug_print(f"Error al actualizar estado: {str(e)}")
 
         # Programar próxima actualización
         self.root.after(3000, self.update_status)

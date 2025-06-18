@@ -18,7 +18,7 @@ import json
 import threading
 from PIL import Image, ImageTk  # Para manejar imágenes del ícono
 import pystray  # Para manejar el área de notificaciones
-from commons.utils import interpretar_estado_plc
+from commons.utils import interpretar_estado_plc, debug_print
 import socketio
 import requests
 
@@ -445,12 +445,12 @@ class MainWindow:
 
             @self.sio.event
             def connect():
-                print("Socket.IO conectado")
+                debug_print("Socket.IO conectado")
                 self.root.after(0, self.set_ws_status, True)
 
             @self.sio.event
             def disconnect():
-                print("Socket.IO desconectado")
+                debug_print("Socket.IO desconectado")
                 self.root.after(0, self.set_ws_status, False)
                 self.root.after(0, self.show_ws_error,
                                 "Conexión Socket.IO perdida")
@@ -471,7 +471,7 @@ class MainWindow:
                         f"http://localhost:{api_port}", transports=['websocket'], wait_timeout=5)
                     self.sio.wait()
                 except Exception as e:
-                    print(f"Fallo conexión Socket.IO: {e}")
+                    debug_print(f"Fallo conexión Socket.IO: {e}")
                     self.root.after(0, self.set_ws_status, False)
                     import time
                     time.sleep(5)
@@ -501,9 +501,9 @@ class MainWindow:
                 label.configure(text=value, text_color="#FFFFFF")
         self.position_label.configure(
             text=str(data.get('position', "---")), text_color="#FFFFFF")
-        print(f"[DEBUG] status_data recibido: {status_data}")
-        print(f"[DEBUG] data['position']: {data.get('position')}")
-        print(f"Estado actualizado (Socket.IO): {interpreted_status}")
+        debug_print(f"[DEBUG] status_data recibido: {status_data}")
+        debug_print(f"[DEBUG] data['position']: {data.get('position')}")
+        debug_print(f"Estado actualizado (Socket.IO): {interpreted_status}")
 
     def show_ws_error(self, msg):
         """

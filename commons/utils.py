@@ -6,6 +6,8 @@ Funciones utilitarias para interpretación de estados del PLC.
 Incluye mapeo de bits a estados legibles y utilidades para el procesamiento de códigos de estado.
 """
 
+import os
+
 ESTADOS_PLC = {
     "READY": {
         "bit": 0,
@@ -142,3 +144,12 @@ def validar_argumento(argument):
         raise ValueError("El argumento debe ser un entero.")
     if not (0 <= argument <= 255):
         raise ValueError("Argumento fuera de rango (0-255)")
+
+
+def is_dev():
+    return os.getenv("APP_ENV", "production").lower() == "development"
+
+
+def debug_print(*args, **kwargs):
+    if is_dev():
+        print(*args, **kwargs)

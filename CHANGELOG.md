@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.5.38
+
+- Separación profesional de entornos: ahora los prints de depuración solo aparecen en desarrollo (`APP_ENV=development`).
+- Se introduce la función `debug_print()` para controlar mensajes de depuración.
+- Todos los prints de depuración han sido reemplazados por `debug_print` en el código fuente.
+- Documentación actualizada sobre el uso de la variable de entorno `APP_ENV` y el control de logs.
+
 ## v2.5.37
 
 - Actualización de `urllib3` a >=2.5.0 para corregir vulnerabilidad GHSA-48p4-8xcf-vxj5 (pip-audit).
