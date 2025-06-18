@@ -116,25 +116,19 @@ class PLC:
 
     def receive_response(self) -> dict:
         """
-        Recibe respuesta del PLC (lee hasta 16 bytes para depuración).
+        Recibe respuesta del PLC (2 bytes: estado y posición) con reintentos y backoff exponencial.
         """
         if not self.sock:
             raise RuntimeError("No hay conexión activa")
         for attempt in range(1, self.max_retries + 1):
             try:
-                data = self.sock.recv(16)  # Leer hasta 16 bytes
+                data = self.sock.recv(2)
                 if len(data) < 2:
                     raise RuntimeError("Respuesta incompleta del PLC")
-                # Log de todos los bytes recibidos
-                self.logger.info(
-                    f"[PLC][DEPURACION] Bytes recibidos: {[b for b in data]} (hex: {[hex(b) for b in data]})")
-                # Por compatibilidad, sigue retornando los dos primeros
-                status = data[0]
-                position = data[2] if len(data) > 2 else 0
+                status, position = struct.unpack('BB', data)
                 return {
                     'status_code': status,
-                    'position': position,
-                    'raw_bytes': list(data)
+                    'position': position
                 }
             except (socket.timeout, struct.error, OSError) as e:
                 self.logger.warning(

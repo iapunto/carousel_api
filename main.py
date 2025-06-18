@@ -37,7 +37,6 @@ Fecha: 2024-09-27
 Actualizado: 2025-06-14
 """
 
-
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -172,25 +171,18 @@ def monitor_plc_status(socketio, plc, interval=5.0):
                     'error': None,
                     'code': None
                 })
-                last_status = status.copy()
-            plc_status_cache['status'] = status
-            plc_status_cache['timestamp'] = _time.time()
+                last_status = status
+                plc_status_cache.clear()
+                plc_status_cache.update(status)
             consecutive_errors = 0
         except Exception as e:
-            logger.error(f"[MONITOR] Error al consultar el PLC: {e}")
+            logger.error(f"[MONITOR] Error en monitor_plc_status: {e}")
             consecutive_errors += 1
-            connected = False
             if consecutive_errors >= max_errors:
-                logger.error(
-                    f"[MONITOR] Emite evento 'plc_status_error' tras {consecutive_errors} fallos.")
-                socketio.emit('plc_status_error', {
-                    'success': False,
-                    'data': None,
-                    'error': str(e),
-                    'code': PLC_CONN_ERROR
-                })
-            _time.sleep(2)
-            continue
+                connected = False
+                logger.warning(
+                    f"[MONITOR] Se alcanzó el máximo de errores consecutivos ({max_errors}), se intentará reconectar.")
+            _time.sleep(interval)
         _time.sleep(interval)
 
 

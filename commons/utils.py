@@ -24,22 +24,22 @@ ESTADOS_PLC = {
     "MODO_OPERACION": {
         "bit": 2,
         "descripcion": {
-            0: "Modo Remoto",
-            1: "Modo Manual"
+            0: "Modo Manual",
+            1: "Modo Remoto"
         }
     },
     "ALARMA": {
         "bit": 3,
         "descripcion": {
-            0: "No hay alarma",
-            1: "Alarma activa"
+            0: "Alarma activa",
+            1: "No hay alarma"
         }
     },
     "PARADA_EMERGENCIA": {
         "bit": 4,
         "descripcion": {
-            0: "Sin parada de emergencia",
-            1: "Parada presionada y activa"
+            1: "Sin parada de emergencia",
+            0: "Parada de emergencia presionada y activa"
         }
     },
     "VFD": {

@@ -1,6 +1,9 @@
 {
   "cSpell.words": [
+<<<<<<< HEAD
     "abarque",
+=======
+>>>>>>> main
     "abierto",
     "abordar",
     "Abortando",
@@ -22,27 +25,37 @@
     "actualizadas",
     "actualizado",
     "Actualizar",
+<<<<<<< HEAD
     "actualmente",
     "adecuadamente",
     "adicional",
     "adicionales",
     "advertencias",
     "afectan",
+=======
+    "adecuadamente",
+>>>>>>> main
     "agresivo",
     "Ahora",
     "ajustar",
     "alarma",
     "Alarma",
     "ALARMA",
+<<<<<<< HEAD
     "Algunas",
     "algunos",
     "alineada",
     "allá",
+=======
+    "algunos",
+    "alineada",
+>>>>>>> main
     "allí",
     "almacena",
     "almacenamiento",
     "almacenan",
     "almacenar",
+<<<<<<< HEAD
     "almacenes",
     "altas",
     "Ampliación",
@@ -52,6 +65,13 @@
     "análisis",
     "aplicación",
     "apropiados",
+=======
+    "Ampliación",
+    "Ampliar",
+    "Añadir",
+    "análisis",
+    "aplicación",
+>>>>>>> main
     "Árbol",
     "archivo",
     "archivos",
@@ -60,6 +80,7 @@
     "argumentos",
     "Arquitectura",
     "Ascendente",
+<<<<<<< HEAD
     "asegurando",
     "asignar",
     "asíncrono",
@@ -72,6 +93,13 @@
     "aumentando",
     "Aumente",
     "Aunque",
+=======
+    "asignar",
+    "asíncrono",
+    "aspecto",
+    "ataque",
+    "AUDITORÍA",
+>>>>>>> main
     "automática",
     "automáticamente",
     "Automatización",
@@ -79,19 +107,27 @@
     "automatizado",
     "automatizados",
     "Autor",
+<<<<<<< HEAD
     "autorizados",
     "avance",
     "avanzada",
+=======
+    "avance",
+>>>>>>> main
     "avanzado",
     "avanzar",
     "azul",
     "bandeja",
     "bandera",
     "basándose",
+<<<<<<< HEAD
     "bien",
     "bloque",
     "bloquear",
     "bloqueo",
+=======
+    "bloque",
+>>>>>>> main
     "botón",
     "Botón",
     "bucle",
@@ -99,6 +135,7 @@
     "cabecera",
     "cacheado",
     "cada",
+<<<<<<< HEAD
     "caída",
     "calidad",
     "cambio",
@@ -106,10 +143,17 @@
     "cangilón",
     "captura",
     "carece",
+=======
+    "calidad",
+    "cambio",
+    "cambios",
+    "captura",
+>>>>>>> main
     "Carga",
     "cargada",
     "Cargar",
     "carpeta",
+<<<<<<< HEAD
     "carrera",
     "carrusel",
     "caso",
@@ -117,13 +161,21 @@
     "causar",
     "centrado",
     "Centralización",
+=======
+    "carrusel",
+    "caso",
+    "causar",
+>>>>>>> main
     "centralizadas",
     "centralizado",
     "cerrado",
     "cerrarse",
     "Cierra",
+<<<<<<< HEAD
     "ciertas",
     "ciertos",
+=======
+>>>>>>> main
     "círculo",
     "clase",
     "clases",
@@ -133,12 +185,16 @@
     "Clonar",
     "Código",
     "códigos",
+<<<<<<< HEAD
     "coincida",
     "Colisiones",
+=======
+>>>>>>> main
     "columnspan",
     "comando",
     "Comando",
     "comandos",
+<<<<<<< HEAD
     "commonpf",
     "complejidad",
     "completa",
@@ -162,10 +218,24 @@
     "conexión",
     "Conexión",
     "Confiabilidad",
+=======
+    "completados",
+    "completamente",
+    "comportamiento",
+    "comunicación",
+    "Conclusión",
+    "concretos",
+    "concurrencia",
+    "conectado",
+    "conectar",
+    "conexión",
+    "Conexión",
+>>>>>>> main
     "Configura",
     "configuración",
     "configuraciones",
     "Configurar",
+<<<<<<< HEAD
     "confirmación",
     "confundir",
     "consideraciones",
@@ -174,10 +244,14 @@
     "consistentes",
     "consolidado",
     "constantes",
+=======
+    "consistentes",
+>>>>>>> main
     "Consulta",
     "Consultando",
     "consultar",
     "Consultar",
+<<<<<<< HEAD
     "consultas",
     "Consulte",
     "consuma",
@@ -188,12 +262,18 @@
     "contexto",
     "contiene",
     "continuación",
+=======
+    "contacta",
+    "contactar",
+    "contiene",
+>>>>>>> main
     "contrario",
     "contraseña",
     "controlado",
     "controlador",
     "controladores",
     "controlar",
+<<<<<<< HEAD
     "coordinar",
     "corrección",
     "correcciones",
@@ -203,10 +283,18 @@
     "creación",
     "Crear",
     "createallsubdirs",
+=======
+    "corrección",
+    "correspondiente",
+    "Crea",
+    "creación",
+    "Crear",
+>>>>>>> main
     "credenciales",
     "Créditos",
     "Criterio",
     "críticas",
+<<<<<<< HEAD
     "críticos",
     "crudo",
     "cual",
@@ -215,6 +303,10 @@
     "cuanto",
     "cubre",
     "cubrir",
+=======
+    "cualquier",
+    "cubre",
+>>>>>>> main
     "cuenta",
     "customtkinter",
     "darkgreen",
@@ -223,6 +315,7 @@
     "debe",
     "deben",
     "Deben",
+<<<<<<< HEAD
     "declaradas",
     "definidos",
     "demasiado",
@@ -230,21 +323,32 @@
     "dentro",
     "depende",
     "Dependencia",
+=======
+    "definidos",
+    "demasiado",
+    "depende",
+>>>>>>> main
     "dependencias",
     "desactiva",
     "Desactivada",
     "desactualizadas",
     "Desarrollado",
+<<<<<<< HEAD
     "desarrollador",
     "desarrolladores",
     "desarrollo",
     "Descendente",
     "desconecta",
+=======
+    "desarrollo",
+    "Descendente",
+>>>>>>> main
     "Desconocido",
     "descripcion",
     "Descripción",
     "descripciones",
     "desde",
+<<<<<<< HEAD
     "Desinstala",
     "Desinstalar",
     "Desplegar",
@@ -255,6 +359,11 @@
     "Detallado",
     "detallados",
     "detallan",
+=======
+    "despliegue",
+    "detalla",
+    "detallados",
+>>>>>>> main
     "detalles",
     "detectados",
     "detenido",
@@ -266,6 +375,7 @@
     "diccionario",
     "Diferencias",
     "diferentes",
+<<<<<<< HEAD
     "difícil",
     "dificultar",
     "Dirección",
@@ -287,6 +397,17 @@
     "documentados",
     "Documentar",
     "documento",
+=======
+    "Dirección",
+    "directa",
+    "directo",
+    "directorios",
+    "disponible",
+    "docstrings",
+    "documentación",
+    "Documentación",
+    "Documentar",
+>>>>>>> main
     "donde",
     "dudas",
     "duplicidades",
@@ -297,6 +418,7 @@
     "ejemplo",
     "ejemplos",
     "Ejemplos",
+<<<<<<< HEAD
     "Elaboraré",
     "Elimina",
     "eliminación",
@@ -304,6 +426,11 @@
     "Eliminar",
     "elimine",
     "ellos",
+=======
+    "eliminación",
+    "Eliminar",
+    "elimine",
+>>>>>>> main
     "emergencia",
     "EMERGENCIA",
     "emite",
@@ -312,21 +439,31 @@
     "empaquetado",
     "Empaquetado",
     "Emula",
+<<<<<<< HEAD
     "emular",
     "Encapsula",
     "encontró",
     "enfoque",
+=======
+    "Encapsula",
+    "encontró",
+>>>>>>> main
     "enriquecer",
     "entero",
     "enteros",
     "entorno",
     "entornos",
     "entrada",
+<<<<<<< HEAD
     "entregaré",
     "Envía",
     "enviado",
     "enviados",
     "envían",
+=======
+    "Envía",
+    "enviado",
+>>>>>>> main
     "enviando",
     "enviar",
     "Enviar",
@@ -334,13 +471,19 @@
     "errores",
     "escritorio",
     "escucha",
+<<<<<<< HEAD
     "español",
+=======
+>>>>>>> main
     "especificado",
     "espera",
     "Esperando",
     "Esperar",
+<<<<<<< HEAD
     "Espere",
     "esquema",
+=======
+>>>>>>> main
     "está",
     "estaba",
     "Establece",
@@ -348,6 +491,7 @@
     "estado",
     "estados",
     "están",
+<<<<<<< HEAD
     "estándar",
     "Estandarización",
     "estandarizadas",
@@ -357,6 +501,12 @@
     "esté",
     "Esto",
     "estrategia",
+=======
+    "estar",
+    "estático",
+    "esté",
+    "Esto",
+>>>>>>> main
     "estrictas",
     "estructura",
     "estructurado",
@@ -369,10 +519,14 @@
     "eventos",
     "evitando",
     "evitar",
+<<<<<<< HEAD
     "exactamente",
     "excepción",
     "excepciones",
     "exclusivo",
+=======
+    "excepción",
+>>>>>>> main
     "exhaustivo",
     "existe",
     "existen",
@@ -381,7 +535,10 @@
     "exitosa",
     "Experiencia",
     "explícita",
+<<<<<<< HEAD
     "explícitamente",
+=======
+>>>>>>> main
     "expone",
     "exponencial",
     "exponer",
@@ -390,34 +547,50 @@
     "externos",
     "Extraer",
     "facilitando",
+<<<<<<< HEAD
     "Facilitar",
     "fallas",
+=======
+>>>>>>> main
     "Fallo",
     "fallos",
     "Falta",
     "Faltan",
+<<<<<<< HEAD
     "fases",
     "Fecha",
     "fiabilidad",
     "filelock",
     "filesandordirs",
+=======
+    "Fecha",
+    "fiabilidad",
+>>>>>>> main
     "flasgger",
     "flujo",
     "flujos",
     "formales",
     "formato",
+<<<<<<< HEAD
     "Formatos",
     "formulario",
     "frágil",
     "frecuentes",
+=======
+    "formulario",
+>>>>>>> main
     "fuera",
     "funcional",
     "funciones",
     "garantizar",
+<<<<<<< HEAD
     "generaba",
     "generar",
     "gestión",
     "gestiona",
+=======
+    "gestión",
+>>>>>>> main
     "gestionando",
     "getenv",
     "gráfica",
@@ -426,15 +599,19 @@
     "Guarda",
     "guardada",
     "Guardar",
+<<<<<<< HEAD
     "Guía",
     "hablando",
     "hace",
     "hacen",
     "haga",
+=======
+>>>>>>> main
     "hallazgos",
     "herramientas",
     "highlightthickness",
     "hilo",
+<<<<<<< HEAD
     "hilos",
     "huérfanos",
     "ícono",
@@ -454,6 +631,15 @@
     "implementarlas",
     "implemente",
     "implica",
+=======
+    "huérfanos",
+    "ícono",
+    "Ignorar",
+    "imágenes",
+    "implementa",
+    "implementados",
+    "Implementar",
+>>>>>>> main
     "Importa",
     "Importación",
     "importantes",
@@ -462,6 +648,7 @@
     "Inactivo",
     "incidencias",
     "incluir",
+<<<<<<< HEAD
     "Incluiré",
     "incluye",
     "incluyendo",
@@ -471,13 +658,23 @@
     "inconsistencias",
     "incorrecta",
     "indica",
+=======
+    "incluye",
+    "incluyendo",
+    "incompleta",
+    "inconsistencias",
+    "incorrecta",
+>>>>>>> main
     "indicador",
     "Indicador",
     "indicadores",
     "industria",
     "Industrias",
+<<<<<<< HEAD
     "inesperado",
     "inesperados",
+=======
+>>>>>>> main
     "inestable",
     "información",
     "informe",
@@ -489,15 +686,21 @@
     "Iniciando",
     "Iniciar",
     "inicio",
+<<<<<<< HEAD
     "inmediatos",
     "innecesarias",
     "instalación",
     "Instalador",
+=======
+    "innecesarias",
+    "instalación",
+>>>>>>> main
     "Instalar",
     "instancia",
     "Instancia",
     "instantáneas",
     "integración",
+<<<<<<< HEAD
     "integrado",
     "integrador",
     "integradores",
@@ -507,12 +710,18 @@
     "intenta",
     "intentaba",
     "intentan",
+=======
+    "Integrales",
+    "integrando",
+    "Integrar",
+>>>>>>> main
     "intentar",
     "intente",
     "Intento",
     "intentos",
     "interfaz",
     "intermitentes",
+<<<<<<< HEAD
     "interna",
     "interno",
     "internos",
@@ -524,6 +733,14 @@
     "interproceso",
     "intervalo",
     "introdujo",
+=======
+    "interno",
+    "Interpreta",
+    "interpretación",
+    "interpretando",
+    "interpretar",
+    "intervalo",
+>>>>>>> main
     "inválidas",
     "inválido",
     "inválidos",
@@ -532,6 +749,7 @@
     "jsonify",
     "jsonlib",
     "LANCZOS",
+<<<<<<< HEAD
     "lanza",
     "lanzaba",
     "Lanzador",
@@ -545,6 +763,13 @@
     "levelname",
     "lidiar",
     "limita",
+=======
+    "Lanzador",
+    "Lanzando",
+    "lanzar",
+    "legibles",
+    "levelname",
+>>>>>>> main
     "Limitar",
     "límites",
     "limpiar",
@@ -554,6 +779,7 @@
     "llamada",
     "llevar",
     "lógica",
+<<<<<<< HEAD
     "lugar",
     "lzma",
     "malformada",
@@ -563,16 +789,27 @@
     "Mantener",
     "mantenibilidad",
     "mantiene",
+=======
+    "manejar",
+    "manejo",
+    "Mantener",
+    "mantenibilidad",
+>>>>>>> main
     "mantienen",
     "mapeo",
     "marcados",
     "máximo",
+<<<<<<< HEAD
     "mecanismo",
     "mediante",
     "MEIPASS",
     "Mejorada",
     "Mejorado",
     "Mejorados",
+=======
+    "mediante",
+    "MEIPASS",
+>>>>>>> main
     "mejorar",
     "mejoras",
     "mensaje",
@@ -580,21 +817,30 @@
     "método",
     "métodos",
     "Métodos",
+<<<<<<< HEAD
     "mientras",
+=======
+>>>>>>> main
     "Migrar",
     "mínima",
     "Minimiza",
     "minimización",
+<<<<<<< HEAD
     "mismo",
     "mismos",
     "mitiga",
     "modelo",
+=======
+>>>>>>> main
     "modelos",
     "moderna",
     "modificación",
     "modos",
     "modularización",
+<<<<<<< HEAD
     "módulo",
+=======
+>>>>>>> main
     "módulos",
     "monitorea",
     "monitoreo",
@@ -606,7 +852,10 @@
     "Muestra",
     "Mueve",
     "MUEVETE",
+<<<<<<< HEAD
     "múltiples",
+=======
+>>>>>>> main
     "necesarias",
     "necesario",
     "necesidad",
@@ -617,9 +866,12 @@
     "Notas",
     "notificación",
     "notificaciones",
+<<<<<<< HEAD
     "notifican",
     "nssm",
     "NSSM",
+=======
+>>>>>>> main
     "nuevo",
     "números",
     "objetivo",
@@ -628,11 +880,17 @@
     "Obtener",
     "Obtiene",
     "Oculta",
+<<<<<<< HEAD
     "ocultos",
     "ocupado",
     "ocurre",
     "ocurrido",
     "onlyifdoesntexist",
+=======
+    "ocupado",
+    "ocurre",
+    "ocurrido",
+>>>>>>> main
     "opcional",
     "OPERACION",
     "operación",
@@ -642,6 +900,7 @@
     "Optimización",
     "optimizado",
     "Optimizar",
+<<<<<<< HEAD
     "organizadas",
     "orientada",
     "orígenes",
@@ -650,6 +909,11 @@
     "oscuro",
     "otra",
     "otras",
+=======
+    "orientada",
+    "Orquesta",
+    "oscuro",
+>>>>>>> main
     "otros",
     "padx",
     "pady",
@@ -661,6 +925,7 @@
     "parámetros",
     "parcialmente",
     "pasos",
+<<<<<<< HEAD
     "pendiente",
     "Pequeña",
     "perdida",
@@ -683,10 +948,25 @@
     "podrían",
     "política",
     "posible",
+=======
+    "Pequeña",
+    "perdida",
+    "Permite",
+    "permitir",
+    "pero",
+    "persistente",
+    "pestaña",
+    "Pestaña",
+    "pestañas",
+    "Pico",
+    "podría",
+    "podrían",
+>>>>>>> main
     "posibles",
     "posición",
     "posicionamiento",
     "POSICIONAMIENTO",
+<<<<<<< HEAD
     "posiciones",
     "prácticas",
     "predeterminado",
@@ -703,18 +983,32 @@
     "prioridades",
     "priorizadas",
     "probados",
+=======
+    "prácticas",
+    "predeterminado",
+    "presionada",
+    "Presionada",
+    "prevención",
+    "principales",
+    "Prioridad",
+    "prioridades",
+>>>>>>> main
     "problemas",
     "procesada",
     "procesado",
     "procesamiento",
+<<<<<<< HEAD
     "procesando",
     "proceso",
     "procesos",
+=======
+>>>>>>> main
     "producción",
     "productivos",
     "profesional",
     "Programar",
     "propaga",
+<<<<<<< HEAD
     "Propagación",
     "propagar",
     "propenso",
@@ -723,6 +1017,11 @@
     "protección",
     "protegido",
     "provocando",
+=======
+    "proporciona",
+    "protección",
+    "protegido",
+>>>>>>> main
     "próxima",
     "Próximos",
     "proyecto",
@@ -731,7 +1030,10 @@
     "Pruebas",
     "públicas",
     "pudo",
+<<<<<<< HEAD
     "puedas",
+=======
+>>>>>>> main
     "puede",
     "pueden",
     "Punto",
@@ -740,16 +1042,23 @@
     "pystray",
     "pytest",
     "PYTHONPATH",
+<<<<<<< HEAD
     "quedan",
     "quedar",
     "queden",
+=======
+    "quedar",
+>>>>>>> main
     "rango",
     "rápida",
     "RDWR",
     "reactivo",
     "reales",
+<<<<<<< HEAD
     "rechazada",
     "rechazando",
+=======
+>>>>>>> main
     "rechazar",
     "Recibe",
     "recibido",
@@ -757,21 +1066,29 @@
     "recibiendo",
     "recibió",
     "recibir",
+<<<<<<< HEAD
     "recibirá",
     "recientemente",
     "recomendable",
     "Recomendaciones",
+=======
+    "recomendable",
+>>>>>>> main
     "recomendado",
     "recomienda",
     "reconectar",
     "reconexión",
+<<<<<<< HEAD
     "recursesubdirs",
+=======
+>>>>>>> main
     "recurso",
     "recursos",
     "Redimensionar",
     "redundante",
     "Reemplaza",
     "Refactorización",
+<<<<<<< HEAD
     "Refactorizada",
     "refactorizar",
     "referencia",
@@ -780,56 +1097,87 @@
     "reforzada",
     "refresco",
     "refuerza",
+=======
+    "refactorizar",
+    "referencia",
+    "reflejar",
+    "reforzada",
+    "refresco",
+>>>>>>> main
     "Refuerzo",
     "registra",
     "registrados",
     "reintentar",
+<<<<<<< HEAD
     "reintente",
     "reintento",
     "reintentos",
     "relevante",
+=======
+    "reintentos",
+>>>>>>> main
     "relevantes",
     "Remoto",
     "rendimiento",
     "repositorio",
+<<<<<<< HEAD
     "representa",
     "requiere",
     "resiliencia",
     "responden",
+=======
+    "requiere",
+>>>>>>> main
     "respondió",
     "responsabilidades",
     "Responsable",
     "responsables",
     "Respuesta",
+<<<<<<< HEAD
     "respuestas",
     "restablecer",
+=======
+>>>>>>> main
     "Restaura",
     "restaurada",
     "Restaurar",
     "restringido",
+<<<<<<< HEAD
     "resultado",
     "resulte",
+=======
+>>>>>>> main
     "Resumen",
     "retorna",
     "reuniones",
     "Revisar",
     "revisión",
+<<<<<<< HEAD
     "riesgos",
     "robusta",
     "robustez",
     "robusto",
     "runascurrentuser",
+=======
+    "robusta",
+    "robustez",
+    "robusto",
+>>>>>>> main
     "ruta",
     "salida",
     "salir",
     "sección",
     "según",
+<<<<<<< HEAD
     "segunda",
+=======
+>>>>>>> main
     "segundos",
     "segura",
     "seguras",
     "seguridad",
     "seguro",
+<<<<<<< HEAD
     "semanales",
     "SENTIDO",
     "separación",
@@ -841,11 +1189,18 @@
     "siempre",
     "significa",
     "siguen",
+=======
+    "SENTIDO",
+    "separación",
+    "servidor",
+    "siempre",
+>>>>>>> main
     "siguiendo",
     "siguiente",
     "simulación",
     "simulado",
     "simulador",
+<<<<<<< HEAD
     "simultáneamente",
     "simultáneas",
     "Simultáneo",
@@ -858,11 +1213,18 @@
     "Solicitud",
     "solicitudes",
     "sólido",
+=======
+    "sistemas",
+    "sobre",
+    "socketio",
+    "Solicitud",
+>>>>>>> main
     "solución",
     "Soluciones",
     "soporte",
     "sugerencias",
     "sugeridos",
+<<<<<<< HEAD
     "suma",
     "suscribirse",
     "sutiles",
@@ -873,11 +1235,19 @@
     "técnicas",
     "técnico",
     "técnicos",
+=======
+    "suscribirse",
+    "Tabview",
+    "tamaño",
+    "tarea",
+    "técnicas",
+>>>>>>> main
     "Tecnología",
     "Tecnologías",
     "tema",
     "Tema",
     "tener",
+<<<<<<< HEAD
     "teoría",
     "texto",
     "textvariable",
@@ -885,10 +1255,17 @@
     "tiene",
     "típicamente",
     "típico",
+=======
+    "texto",
+    "textvariable",
+    "tiempo",
+    "típicamente",
+>>>>>>> main
     "tipo",
     "tipos",
     "Título",
     "Tkinter",
+<<<<<<< HEAD
     "todas",
     "tras",
     "través",
@@ -902,27 +1279,44 @@
     "unificados",
     "Unificar",
     "uninstallexe",
+=======
+    "tras",
+    "través",
+    "ttkthemes",
+    "uiversion",
+    "Última",
+    "unificación",
+    "Unificar",
+>>>>>>> main
     "unitarias",
     "unos",
     "usado",
     "usados",
     "usan",
     "usando",
+<<<<<<< HEAD
     "usar",
+=======
+>>>>>>> main
     "usará",
     "usuario",
     "útiles",
     "utilidades",
     "utilitarias",
+<<<<<<< HEAD
     "utiliza",
     "utilizado",
     "utilizados",
+=======
+    "utilizado",
+>>>>>>> main
     "Valida",
     "válida",
     "validación",
     "validaciones",
     "validan",
     "Validar",
+<<<<<<< HEAD
     "válidas",
     "valide",
     "Valide",
@@ -930,15 +1324,22 @@
     "variador",
     "varias",
     "varios",
+=======
+    "valores",
+    "variador",
+>>>>>>> main
     "vectores",
     "velocidad",
     "ventana",
     "venv",
     "verifica",
+<<<<<<< HEAD
     "Verifique",
     "versión",
     "versiones",
     "viceversa",
+=======
+>>>>>>> main
     "visuales",
     "Werkzeug",
     "wsgi"
