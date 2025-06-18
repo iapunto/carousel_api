@@ -88,7 +88,7 @@ HTML = '''
 '''
 
 last_command_time = 0
-COMMAND_COOLDOWN = 2  # segundos
+COMMAND_COOLDOWN = 5  # segundos
 
 
 @app.route("/")
@@ -108,16 +108,24 @@ def move():
     if now - last_command_time < COMMAND_COOLDOWN:
         return jsonify(success=False, error=f"Espere {COMMAND_COOLDOWN} segundos entre comandos"), 429
     last_command_time = now
-    try:
-        # Enviar comando 1 (mover) a la API REST
-        resp = requests.post(
-            API_URL, json={"command": 1, "argument": pos}, timeout=3)
-        if resp.status_code == 200:
-            return jsonify(success=True)
-        else:
-            return jsonify(success=False, error=resp.json().get('error', 'Error API'))
-    except Exception as e:
-        return jsonify(success=False, error=str(e))
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.post(
+                API_URL, json={"command": 1, "argument": pos}, timeout=3)
+            if resp.status_code == 200:
+                return jsonify(success=True)
+            else:
+                error_msg = resp.json().get('error', 'Error API')
+                if attempt < max_retries:
+                    time.sleep(2)
+                    continue
+                return jsonify(success=False, error=f"Error tras {max_retries} intentos: {error_msg}")
+        except Exception as e:
+            if attempt < max_retries:
+                time.sleep(2)
+                continue
+            return jsonify(success=False, error=f"Error de red tras {max_retries} intentos: {str(e)}")
 
 
 if __name__ == "__main__":
