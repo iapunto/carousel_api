@@ -1,6 +1,10 @@
-from flask import Flask, render_template_string, request, jsonify
-import requests
 import time
+import requests
+from flask import Flask, render_template_string, request, jsonify
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(
+    __file__), "python_portable", "site-packages"))
 
 app = Flask(__name__)
 

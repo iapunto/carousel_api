@@ -211,3 +211,20 @@ PLAN_ACCION.md
 build/
 dist/
 Installer_VerticalPIC.exe
+vertical-pic.iss
+python_portable/
+carousel_api.log
+debug.log
+*.log
+*.exe
+*.bat
+*.dll
+*.lib
+*.pyd
+*.so
+*.zip
+*.tar.gz
+*.dist-info/
+
+# Ignorar archivos de configuración y temporales de herramientas
+config.json

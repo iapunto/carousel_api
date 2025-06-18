@@ -1,25 +1,33 @@
-from logging.handlers import RotatingFileHandler
-from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY
-from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
-import sys
-import time
-import socket
-import multiprocessing
-import copy
-from flask_socketio import SocketIO
-import eventlet.green.threading as threading
-import eventlet
-import logging
-from gui.main_gui import MainWindow  # Interfaz gráfica
-from models.plc import PLC  # Importa PLC real
-from api import create_app  # Importa la API [[3]]
-import threading
-import json
-from tkinter import ttk, messagebox
 import tkinter as tk
+from tkinter import ttk, messagebox
+import json
+import threading
+from api import create_app  # Importa la API [[3]]
+from models.plc import PLC  # Importa PLC real
+from gui.main_gui import MainWindow  # Interfaz gráfica
+import logging
+import eventlet
+import eventlet.green.threading as threading
+from flask_socketio import SocketIO
+import copy
+import multiprocessing
+import socket
+import time
+from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
+from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY
+from logging.handlers import RotatingFileHandler
+import sys
 import os
+# Añade la ruta base del proyecto al sys.path para permitir imports de paquetes locales
+base_dir = os.path.dirname(os.path.abspath(__file__))
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
 os.environ["EVENTLET_NO_GREENDNS"] = "yes"
 sys.modules["eventlet.support.greendns"] = None
+site_packages = os.path.join(os.path.dirname(
+    __file__), 'python_portable', 'site-packages')
+if site_packages not in sys.path:
+    sys.path.insert(0, site_packages)
 
 """
 Aplicación de escritorio para control de carrusel industrial
