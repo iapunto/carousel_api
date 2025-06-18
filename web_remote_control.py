@@ -1,5 +1,6 @@
 from flask import Flask, render_template_string, request, jsonify
 import requests
+import time
 
 app = Flask(__name__)
 
@@ -86,6 +87,9 @@ HTML = '''
 </html>
 '''
 
+last_command_time = 0
+COMMAND_COOLDOWN = 2  # segundos
+
 
 @app.route("/")
 def index():
@@ -94,11 +98,16 @@ def index():
 
 @app.route("/move", methods=["POST"])
 def move():
+    global last_command_time
     data = request.get_json()
     pos = data.get("position")
     # Validar que solo se acepten valores 0-5 (cangilones 1-6)
     if not isinstance(pos, int) or pos < 0 or pos > 5:
         return jsonify(success=False, error="Solo se permiten cangilones del 1 al 6"), 400
+    now = time.time()
+    if now - last_command_time < COMMAND_COOLDOWN:
+        return jsonify(success=False, error=f"Espere {COMMAND_COOLDOWN} segundos entre comandos"), 429
+    last_command_time = now
     try:
         # Enviar comando 1 (mover) a la API REST
         resp = requests.post(
