@@ -29,31 +29,42 @@ HTML = '''
         <h2>Control Remoto Carrusel</h2>
         <div class="input-group">
             <button onclick="changeValue(-1)">&#8593;</button>
-            <input id="posInput" type="number" min="0" max="99" value="0">
+            <input id="posInput" type="number" min="1" max="6" value="1">
             <button onclick="changeValue(1)">&#8595;</button>
         </div>
+        <div style="margin-bottom:1em; font-size:1.1em;">Cangilón seleccionado: <span id="cangilonLabel">1</span></div>
         <button id="send-btn" onclick="sendCommand()">Mover</button>
         <div id="feedback"></div>
     </div>
     <script>
         function changeValue(delta) {
             let input = document.getElementById('posInput');
-            let val = parseInt(input.value) || 0;
+            let val = parseInt(input.value) || 1;
             val += delta;
-            if (val < 0) val = 0;
-            if (val > 99) val = 99;
+            if (val < 1) val = 1;
+            if (val > 6) val = 6;
             input.value = val;
+            document.getElementById('cangilonLabel').textContent = val;
         }
+        document.getElementById('posInput').addEventListener('input', function() {
+            let val = parseInt(this.value) || 1;
+            if (val < 1) val = 1;
+            if (val > 6) val = 6;
+            this.value = val;
+            document.getElementById('cangilonLabel').textContent = val;
+        });
         function sendCommand() {
             let pos = parseInt(document.getElementById('posInput').value);
-            if (isNaN(pos) || pos < 0 || pos > 99) {
-                showFeedback('Posición inválida', true);
+            if (isNaN(pos) || pos < 1 || pos > 6) {
+                showFeedback('Cangilón inválido', true);
                 return;
             }
+            // Restar 1 para enviar a la API (0-5)
+            let apiPos = pos - 1;
             fetch('/move', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ position: pos })
+                body: JSON.stringify({ position: apiPos })
             })
             .then(r => r.json())
             .then(data => {
