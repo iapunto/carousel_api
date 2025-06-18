@@ -27,7 +27,6 @@ class TestPLCSimulator(unittest.TestCase):
         self.assertEqual(self.plc_simulator.current_position, new_position)
         self.assertNotEqual(
             self.plc_simulator.current_position, initial_position)
-<<<<<<< HEAD
 
     def test_send_command_error_en_movimiento(self):
         self.plc_simulator.connect()
@@ -40,8 +39,6 @@ class TestPLCSimulator(unittest.TestCase):
         self.plc_simulator.connect()
         with self.assertRaises(Exception):
             self.plc_simulator.send_command(1, 999)  # Argumento fuera de rango
-=======
->>>>>>> main
 
     def tearDown(self):
         self.plc_simulator.close()

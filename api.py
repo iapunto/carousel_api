@@ -21,7 +21,7 @@ from controllers.carousel_controller import CarouselController
 import time
 from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
 from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY, BAD_COMMAND, BAD_REQUEST, INTERNAL_ERROR
-from filelock import Timeout as FileLockTimeout
+from filelock import Timeout
 
 
 def create_app(plc):
@@ -201,12 +201,28 @@ def create_app(plc):
             # Ejecutar el comando usando el controlador
             result = carousel_controller.send_command(command, argument)
             logger.info(f"[COMMAND] Respuesta: {result}")
+            if isinstance(result, dict) and result.get('error') == 'PLC en movimiento':
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': result['error'],
+                    'code': PLC_BUSY
+                }), 409
             return jsonify({
                 'success': True,
                 'data': result,
                 'error': None,
                 'code': None
             }), 200
+        except Timeout as e:
+            logger.warning(
+                f"[COMMAND] Timeout al adquirir lock interproceso para {request.remote_addr}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'data': None,
+                'error': 'PLC ocupado por otro proceso, intente de nuevo en unos segundos',
+                'code': PLC_BUSY
+            }), 409
         except Exception as e:
             logger.error(
                 f"[COMMAND] Error para {request.remote_addr}: {str(e)}")
