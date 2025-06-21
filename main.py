@@ -41,7 +41,7 @@ Actualizado: 2025-06-14
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
-    "ip": "192.168.1.100",
+    "ip": "192.168.1.50",
     "port": 3200,
     "simulator_enabled": False
 }

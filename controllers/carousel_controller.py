@@ -14,13 +14,17 @@ from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from commons.utils import interpretar_estado_plc, validar_comando, validar_argumento
 import time
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 
 # Configuración de bitácora de operaciones
 operations_logger = logging.getLogger("operations")
 if not operations_logger.hasHandlers():
+    log_folder = os.path.join(
+        os.getenv('LOCALAPPDATA'), 'Vertical PIC', 'logs')
+    os.makedirs(log_folder, exist_ok=True)
     handler = RotatingFileHandler(
-        "operations.log", maxBytes=500_000, backupCount=5, encoding="utf-8")
+        os.path.join(log_folder, "operations.log"), maxBytes=500_000, backupCount=5, encoding="utf-8")
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     handler.setFormatter(formatter)
     operations_logger.addHandler(handler)
@@ -41,6 +45,7 @@ class CarouselController:
         """
         self.plc = plc
         self.logger = logging.getLogger(__name__)
+        self.response_delay = 0.2  # Tiempo de espera para la respuesta del PLC en segundos
 
     def send_command(self, command: int, argument: int = None, remote_addr=None) -> dict:
         """
@@ -72,6 +77,8 @@ class CarouselController:
                 self.logger.info(
                     f"[PLC] Enviando comando: {command}, argumento: {argument}")
                 self.plc.send_command(command, argument)
+                # Pausa para dar tiempo al PLC a procesar el comando antes de responder
+                time.sleep(self.response_delay)
                 response = self.plc.receive_response()
             # Log de bajo nivel: datos crudos recibidos
             status_code = response['status_code']
