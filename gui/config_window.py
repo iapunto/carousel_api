@@ -289,7 +289,7 @@ class ConfigWindow:
 
         if mode == "single":
             # Deshabilitar funciones multi-PLC
-            self.machines_tree.configure(state="disabled")
+            # Para TreeView, simplemente ocultamos los botones y deshabilitamos la interacción
             self.add_button.configure(state="disabled")
             self.update_button.configure(state="disabled")
             self.delete_button.configure(state="disabled")
@@ -304,11 +304,15 @@ class ConfigWindow:
                 single_config.get("simulator_enabled", False))
             self.form_vars["description"].set("Configuración Single-PLC")
 
+            # Limpiar la lista de máquinas en modo single
+            for item in self.machines_tree.get_children():
+                self.machines_tree.delete(item)
+
         else:  # multi
             # Habilitar funciones multi-PLC
-            self.machines_tree.configure(state="normal")
             self.add_button.configure(state="normal")
             self.clear_form()
+            self.refresh_machines_list()
 
     def refresh_machines_list(self):
         """Actualiza la lista de máquinas."""
@@ -332,8 +336,12 @@ class ConfigWindow:
 
     def on_machine_selected(self, event):
         """Maneja la selección de una máquina."""
+        # Solo funciona en modo multi-PLC
+        if self.mode_var.get() != "multi":
+            return
+
         selection = self.machines_tree.selection()
-        if selection and self.mode_var.get() == "multi":
+        if selection:
             item = self.machines_tree.item(selection[0])
             machine_id = item["values"][0]
 

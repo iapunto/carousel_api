@@ -61,7 +61,8 @@ class WebSocketServer:
             if config_manager.is_multi_plc_enabled():
                 # Modo Multi-PLC
                 self.is_multi_plc = True
-                self.plc_manager = PLCManager()
+                machines_config = config_manager.get_machines_list()
+                self.plc_manager = PLCManager(machines_config)
                 machines = self.plc_manager.get_available_machines()
                 self.logger.info(
                     f"Servidor WebSocket iniciado en modo MULTI-PLC con {len(machines)} máquinas")

@@ -75,11 +75,9 @@ class MainWindow:
 
         self.root.geometry("400x500")
 
-        # Variables de control
-        self.ip_var = ctk.StringVar(value=config["ip"])
-        self.port_var = ctk.StringVar(value=str(config["port"]))
+        # Variables de control (mantenemos solo las necesarias)
         self.dev_mode_var = ctk.BooleanVar(value=config.get(
-            "simulator_enabled", False))  # Estado del modo desarrollo
+            "simulator_enabled", False))  # Estado del modo desarrollo (legacy)
 
         # Variables de control
         self.command_var = ctk.StringVar(value="1")
@@ -349,102 +347,105 @@ class MainWindow:
             self.position_label.configure(text="---", text_color="gray")
 
     def create_config_frame(self, parent):
-        """Frame para configuración de IP, puerto y modo"""
+        """Frame para configuración del sistema multi-PLC"""
         config_frame = ctk.CTkFrame(parent, corner_radius=10)
         config_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
         # Título
         title_label = ctk.CTkLabel(
-            config_frame, text="Configuración del Sistema", font=("Arial", 14, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2,
-                         pady=(5, 10), sticky="w")
+            config_frame, text="Configuración del Sistema", font=("Arial", 16, "bold"))
+        title_label.pack(pady=(20, 30))
 
-        # IP
-        ctk.CTkLabel(config_frame, text="IP PLC:").grid(
-            row=1, column=0, padx=5, pady=5)
-        ctk.CTkEntry(config_frame, textvariable=self.ip_var,
-                     width=150).grid(row=1, column=1)
+        # Información del sistema
+        info_frame = ctk.CTkFrame(config_frame, corner_radius=8)
+        info_frame.pack(padx=20, pady=10, fill="x")
 
-        # Puerto PLC
-        ctk.CTkLabel(config_frame, text="Puerto PLC:").grid(
-            row=2, column=0, padx=5, pady=5)
-        ctk.CTkEntry(config_frame, textvariable=self.port_var,
-                     width=50).grid(row=2, column=1)
+        info_label = ctk.CTkLabel(
+            info_frame,
+            text="Sistema Multi-PLC\nConfiguración centralizada de máquinas",
+            font=("Arial", 12),
+            text_color="#888888"
+        )
+        info_label.pack(pady=15)
 
-        # Puerto API
-        # Puerto predeterminado para la API
-        self.api_port_var = ctk.StringVar(value=str(5001))
-        ctk.CTkLabel(config_frame, text="Puerto API:").grid(
-            row=3, column=0, padx=5, pady=5)
-        ctk.CTkEntry(config_frame, textvariable=self.api_port_var,
-                     width=50).grid(row=3, column=1)
-
-        # Modo Desarrollo/Producción
-        ctk.CTkCheckBox(config_frame, text="Modo Simulador", variable=self.dev_mode_var,
-                        command=self.toggle_development_mode).grid(row=4, column=0, columnspan=2, pady=10)
-
-        # Botón Guardar
-        ctk.CTkButton(config_frame, text="Guardar", command=self.save_config).grid(
-            row=5, column=0, columnspan=2, pady=10)
-
-        # Botón para desplegar la app web
-        ctk.CTkButton(config_frame, text="Desplegar control web", command=self.launch_web_app, fg_color="#007bff", hover_color="#0056b3").grid(
-            row=6, column=0, columnspan=2, pady=10)
-
-        # Botón para instalar el servicio de la App Web
-        ctk.CTkButton(config_frame, text="Instalar servicio App Web", command=self.install_webapp_service, fg_color="#28a745", hover_color="#1e7e34").grid(
-            row=7, column=0, pady=10)
-        # Botón para desinstalar el servicio de la App Web
-        ctk.CTkButton(config_frame, text="Desinstalar servicio App Web", command=self.uninstall_webapp_service, fg_color="#dc3545", hover_color="#a71d2a").grid(
-            row=7, column=1, pady=10)
+        # Botón principal para configurar máquinas
+        ctk.CTkButton(
+            config_frame,
+            text="⚙️ Configurar Máquinas",
+            command=self.open_machine_config,
+            fg_color="#6f42c1",
+            hover_color="#5a2d91",
+            font=("Arial", 14, "bold"),
+            height=50
+        ).pack(pady=20, padx=20, fill="x")
 
         # Separador
-        ctk.CTkLabel(config_frame, text="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", text_color="gray").grid(
-            row=8, column=0, columnspan=2, pady=10)
+        ctk.CTkLabel(config_frame, text="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                     text_color="gray").pack(pady=20)
 
-        # Botón para configurar máquinas
-        ctk.CTkButton(config_frame, text="⚙️ Configurar Máquinas", command=self.open_machine_config,
-                      fg_color="#6f42c1", hover_color="#5a2d91", font=("Arial", 12, "bold")).grid(
-            row=9, column=0, columnspan=2, pady=10, sticky="ew")
+        # Botones de servicios web
+        web_frame = ctk.CTkFrame(config_frame, corner_radius=8)
+        web_frame.pack(padx=20, pady=10, fill="x")
+
+        ctk.CTkLabel(web_frame, text="Servicios Web", font=(
+            "Arial", 12, "bold")).pack(pady=(10, 5))
+
+        # Botón para desplegar la app web
+        ctk.CTkButton(
+            web_frame,
+            text="🌐 Desplegar Control Web",
+            command=self.launch_web_app,
+            fg_color="#007bff",
+            hover_color="#0056b3"
+        ).pack(pady=5, padx=10, fill="x")
+
+        # Frame para botones de servicio
+        service_frame = ctk.CTkFrame(web_frame, fg_color="transparent")
+        service_frame.pack(pady=5, padx=10, fill="x")
+
+        # Botón para instalar el servicio de la App Web
+        ctk.CTkButton(
+            service_frame,
+            text="📦 Instalar Servicio",
+            command=self.install_webapp_service,
+            fg_color="#28a745",
+            hover_color="#1e7e34"
+        ).pack(side="left", padx=(0, 5), fill="x", expand=True)
+
+        # Botón para desinstalar el servicio de la App Web
+        ctk.CTkButton(
+            service_frame,
+            text="🗑️ Desinstalar Servicio",
+            command=self.uninstall_webapp_service,
+            fg_color="#dc3545",
+            hover_color="#a71d2a"
+        ).pack(side="right", padx=(5, 0), fill="x", expand=True)
+
+        web_frame.pack_configure(pady=(10, 20))
 
     def save_config(self):
-        """Guarda la configuración IP/puerto en config.json"""
+        """Guarda la configuración legacy en config.json (modo simulador)"""
         try:
-            new_config = {
-                "ip": self.ip_var.get(),
-                "port": int(self.port_var.get()),
-                # Guarda el puerto de la API
-                "api_port": int(self.api_port_var.get()),
-                "simulator_enabled": self.dev_mode_var.get()
-            }
+            # Mantener configuración existente y solo actualizar lo necesario
+            current_config = self.config.copy()
+            current_config["simulator_enabled"] = self.dev_mode_var.get()
+
             with open(CONFIG_FILE, 'w') as f:
-                json.dump(new_config, f)
+                json.dump(current_config, f)
             messagebox.showinfo("Éxito", "Configuración guardada")
-        except ValueError:
-            messagebox.showerror("Error", "Puerto inválido")
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"Error guardando configuración: {str(e)}")
 
     def toggle_development_mode(self):
-        """Activa o desactiva el modo simulador"""
-        if self.dev_mode_var.get():
-            password = simpledialog.askstring(
-                "Validación", "Ingrese la contraseña de desarrollo:", show='*')
-            if password != "DESARROLLO123":
-                messagebox.showerror("Error", "Contraseña incorrecta")
-                self.dev_mode_var.set(False)
-                return
-
-            from models.plc_simulator import PLCSimulator
-            self.plc = PLCSimulator(self.config["ip"], self.config["port"])
-            messagebox.showinfo("Modo Desarrollo", "Modo simulador activado")
-        else:
-            from models.plc import PLC
-            self.plc = PLC(self.config["ip"], self.config["port"])
-            messagebox.showinfo("Modo Producción",
-                                "Conexión con PLC real restaurada")
-
-        self.config["simulator_enabled"] = self.dev_mode_var.get()
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(self.config, f)
+        """Función legacy - El modo simulador ahora se configura por máquina"""
+        messagebox.showinfo(
+            "Información",
+            "El modo simulador ahora se configura individualmente por máquina.\n\n"
+            "Use el botón 'Configurar Máquinas' para configurar cada PLC como real o simulador."
+        )
+        # Resetear el checkbox
+        self.dev_mode_var.set(False)
 
     def open_machine_config(self):
         """Abre la ventana de configuración de máquinas."""
@@ -458,6 +459,20 @@ class MainWindow:
         """Callback ejecutado cuando la configuración de máquinas cambia."""
         messagebox.showinfo(
             "Configuración", "La configuración ha sido actualizada.\n\nLos cambios se aplicarán al reiniciar la aplicación.")
+
+    def _get_api_port(self):
+        """Obtiene el puerto de la API según la configuración actual"""
+        try:
+            # Intentar cargar configuración multi-PLC primero
+            if os.path.exists("config_multi_plc.json"):
+                with open("config_multi_plc.json", "r", encoding="utf-8") as f:
+                    multi_config = json.load(f)
+                    return multi_config.get("api_config", {}).get("port", 5000)
+            else:
+                # Fallback a configuración single-PLC
+                return self.config.get("api_port", 5000)
+        except Exception:
+            return 5000  # Puerto por defecto
 
     def start_socketio_listener(self):
         """
@@ -489,7 +504,8 @@ class MainWindow:
 
             while not self._stop_sio:
                 try:
-                    api_port = self.config.get('api_port', 5000)
+                    # Obtener puerto correcto según configuración multi-PLC o single-PLC
+                    api_port = self._get_api_port()
                     self.sio.connect(
                         f"http://localhost:{api_port}", transports=['websocket'], wait_timeout=5)
                     self.sio.wait()

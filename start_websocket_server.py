@@ -64,21 +64,27 @@ El servidor se conectará automáticamente a los PLCs configurados en:
 
     args = parser.parse_args()
 
-    # Configurar logging
+    # Configurar logging con encoding UTF-8
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler("websocket_server.log"),
+            logging.FileHandler("websocket_server.log", encoding='utf-8'),
             logging.StreamHandler()
         ]
     )
+
+    # Configurar stdout para UTF-8 en Windows
+    import sys
+    if sys.platform == "win32":
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
     logger = logging.getLogger(__name__)
 
     try:
         logger.info("=" * 50)
-        logger.info("🚀 Iniciando Servidor WebSocket para WMS")
+        logger.info("Iniciando Servidor WebSocket para WMS")
         logger.info("=" * 50)
         logger.info(f"Host: {args.host}")
         logger.info(f"Puerto: {args.port}")
@@ -87,16 +93,16 @@ El servidor se conectará automáticamente a los PLCs configurados en:
 
         # Verificar configuración
         if os.path.exists("config_multi_plc.json"):
-            logger.info("✅ Configuración multi-PLC encontrada")
+            logger.info("Configuración multi-PLC encontrada")
         elif os.path.exists("config.json"):
-            logger.info("✅ Configuración single-PLC encontrada (fallback)")
+            logger.info("Configuración single-PLC encontrada (fallback)")
         else:
-            logger.error("❌ No se encontró archivo de configuración")
+            logger.error("No se encontró archivo de configuración")
             logger.error(
                 "   Asegúrese de que existe 'config_multi_plc.json' o 'config.json'")
             sys.exit(1)
 
-        logger.info("🔌 Iniciando servidor WebSocket...")
+        logger.info("Iniciando servidor WebSocket...")
         logger.info("   Presione Ctrl+C para detener el servidor")
         logger.info("-" * 50)
 
@@ -104,12 +110,12 @@ El servidor se conectará automáticamente a los PLCs configurados en:
         run_websocket_server(args.host, args.port)
 
     except KeyboardInterrupt:
-        logger.info("\n🛑 Servidor detenido por el usuario")
+        logger.info("\nServidor detenido por el usuario")
     except Exception as e:
-        logger.error(f"❌ Error crítico: {e}")
+        logger.error(f"Error crítico: {e}")
         sys.exit(1)
     finally:
-        logger.info("👋 Servidor WebSocket finalizado")
+        logger.info("Servidor WebSocket finalizado")
 
 
 if __name__ == "__main__":
