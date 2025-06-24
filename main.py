@@ -257,7 +257,7 @@ if __name__ == "__main__":
         debug_print(
             f"ERROR: El backend no respondió en el puerto {config.get('api_port', 5000)} tras {max_retries} segundos. Abortando.")
         backend_process.terminate()
-        exit(1)
+        sys.exit(1)
 
     # Iniciar GUI en el hilo principal
     root = tk.Tk()
@@ -267,9 +267,14 @@ if __name__ == "__main__":
     backend_process.terminate()
 
 # Configuración de logging global con rotación
-log_handler = RotatingFileHandler(
-    "carousel_api.log", maxBytes=1_000_000, backupCount=5, encoding="utf-8")
+file_log_dir = os.path.join(os.getenv('LOCALAPPDATA'), 'Vertical PIC', 'logs')
+os.makedirs(file_log_dir, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[
+        logging.FileHandler(os.path.join(file_log_dir, "carousel_api.log")),
+        logging.StreamHandler()
+    ]
+)
 log_formatter = logging.Formatter(
     '%(asctime)s %(levelname)s %(name)s %(message)s')
-log_handler.setFormatter(log_formatter)
-logging.basicConfig(level=logging.INFO, handlers=[log_handler])

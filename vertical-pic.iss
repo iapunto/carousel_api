@@ -1,5 +1,6 @@
-#define MyAppName "Vertical PIC"
-#define MyAppVersion "3.0.0"
+#define MyAppName "VerticalPIC"
+#define MyFolderName "VerticalPIC"
+#define MyAppVersion "2.6.0"
 #define MyAppExeName "VerticalPIC.exe"
 #define MyAppPublisher "Industrias PICO"
 
@@ -20,10 +21,10 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Files]
 ; Ejecutable principal
-Source: "dist\VerticalPic\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\{#MyFolderName}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Archivos PyInstaller (--onedir) en subcarpeta _internal
-Source: "dist\VerticalPic\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\main\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
