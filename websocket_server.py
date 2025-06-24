@@ -365,7 +365,7 @@ class WebSocketServer:
                 self.logger.error(f"Error en status_broadcast_loop: {e}")
                 await asyncio.sleep(5)
 
-    async def handle_client(self, websocket: websockets.WebSocketServerProtocol, path: str):
+    async def handle_client(self, websocket: websockets.WebSocketServerProtocol):
         """Maneja conexiones de clientes WebSocket."""
         await self.register_client(websocket)
         try:
@@ -384,25 +384,33 @@ class WebSocketServer:
         self.logger.info(
             f"Iniciando servidor WebSocket en {self.host}:{self.port}")
 
-        # Inicializar configuración
-        self.initialize()
+        try:
+            # Inicializar configuración
+            self.initialize()
+            self.logger.info("Configuración inicializada correctamente")
 
-        # Iniciar loop de broadcast de estado
-        self.status_broadcast_task = asyncio.create_task(
-            self.status_broadcast_loop())
+            # Iniciar loop de broadcast de estado
+            self.status_broadcast_task = asyncio.create_task(
+                self.status_broadcast_loop())
+            self.logger.info("Task de broadcast iniciada")
 
-        # Iniciar servidor WebSocket
-        server = await websockets.serve(
-            self.handle_client,
-            self.host,
-            self.port,
-            ping_interval=30,
-            ping_timeout=10
-        )
+            # Iniciar servidor WebSocket
+            server = await websockets.serve(
+                self.handle_client,
+                self.host,
+                self.port,
+                ping_interval=30,
+                ping_timeout=10
+            )
 
-        self.logger.info(
-            f"Servidor WebSocket ejecutándose en ws://{self.host}:{self.port}")
-        return server
+            self.logger.info(
+                f"Servidor WebSocket ejecutándose en ws://{self.host}:{self.port}")
+            self.logger.info("Servidor listo para recibir conexiones")
+            return server
+
+        except Exception as e:
+            self.logger.error(f"Error iniciando servidor WebSocket: {e}")
+            raise
 
     def stop_server(self):
         """Detiene el servidor WebSocket."""
@@ -417,13 +425,28 @@ def run_websocket_server(host: str = "0.0.0.0", port: int = 8765):
     server = WebSocketServer(host, port)
 
     async def main():
-        websocket_server = await server.start_server()
         try:
-            await websocket_server.wait_closed()
-        except KeyboardInterrupt:
-            server.stop_server()
+            websocket_server = await server.start_server()
+            server.logger.info("Servidor iniciado, esperando conexiones...")
 
-    asyncio.run(main())
+            # Mantener el servidor ejecutándose indefinidamente
+            await websocket_server.wait_closed()
+
+        except KeyboardInterrupt:
+            server.logger.info("Interrupción por teclado recibida")
+            server.stop_server()
+        except Exception as e:
+            server.logger.error(f"Error en servidor WebSocket: {e}")
+            server.stop_server()
+            raise
+
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        server.logger.info("Servidor detenido por el usuario")
+    except Exception as e:
+        server.logger.error(f"Error fatal: {e}")
+        raise
 
 
 if __name__ == "__main__":

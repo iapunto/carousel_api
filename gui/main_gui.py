@@ -73,7 +73,7 @@ class MainWindow:
         else:
             print(f"No se encontró el archivo de ícono: {icon_path}")
 
-        self.root.geometry("400x500")
+        self.root.geometry("800x625")
 
         # Variables de control (mantenemos solo las necesarias)
         self.dev_mode_var = ctk.BooleanVar(value=config.get(
