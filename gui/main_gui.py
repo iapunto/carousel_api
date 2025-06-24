@@ -79,7 +79,12 @@ class MainWindow:
         self.dev_mode_var = ctk.BooleanVar(value=config.get(
             "simulator_enabled", False))  # Estado del modo desarrollo (legacy)
 
-        # Variables de control
+        # Variables de control para comandos
+        self.selected_machine_var = ctk.StringVar()
+        self.cangilon_var = ctk.IntVar(value=1)
+        self.command_result_var = ctk.StringVar(value="")
+
+        # Variables legacy (mantener compatibilidad)
         self.command_var = ctk.StringVar(value="1")
         self.argument_var = ctk.StringVar(value="3")
 
@@ -278,26 +283,305 @@ class MainWindow:
         self.create_config_frame(tab_config)
 
     def create_command_frame(self, parent):
-        """Crea la pestaña para enviar comandos al PLC."""
-        command_frame = ctk.CTkFrame(parent, corner_radius=10)
-        command_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        """Crea la pestaña para enviar comandos al PLC con interfaz mejorada."""
+        # Frame principal
+        main_frame = ctk.CTkFrame(parent, corner_radius=10)
+        main_frame.pack(padx=20, pady=20, fill="both", expand=True)
 
-        # Campo para el comando
-        ctk.CTkLabel(command_frame, text="Comando:").grid(
-            row=0, column=0, padx=5, pady=5, sticky="w")
-        ctk.CTkEntry(command_frame, textvariable=self.command_var,
-                     width=50).grid(row=0, column=1, padx=5, pady=5)
+        # Título
+        title_label = ctk.CTkLabel(
+            main_frame,
+            text="🎯 Control de Carrusel",
+            font=("Arial", 18, "bold")
+        )
+        title_label.pack(pady=(20, 30))
 
-        # Campo para el argumento
-        ctk.CTkLabel(command_frame, text="Argumento:").grid(
-            row=1, column=0, padx=5, pady=5, sticky="w")
-        ctk.CTkEntry(command_frame, textvariable=self.argument_var,
-                     width=50).grid(row=1, column=1, padx=5, pady=5)
+        # Frame para controles
+        controls_frame = ctk.CTkFrame(main_frame, corner_radius=12)
+        controls_frame.pack(padx=40, pady=20, fill="x")
 
-        # Botón Enviar
-        send_button = ctk.CTkButton(
-            command_frame, text="Enviar", command=self.send_test_command, fg_color="green", hover_color="darkgreen")
-        send_button.grid(row=2, column=0, columnspan=2, pady=10)
+        # Selector de máquina
+        machine_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        machine_frame.pack(pady=20, padx=30, fill="x")
+
+        ctk.CTkLabel(
+            machine_frame,
+            text="🏭 Seleccionar Máquina:",
+            font=("Arial", 14, "bold")
+        ).pack(anchor="w", pady=(0, 8))
+
+        # Cargar máquinas disponibles
+        self.load_available_machines()
+
+        self.machine_selector = ctk.CTkComboBox(
+            machine_frame,
+            variable=self.selected_machine_var,
+            values=self.get_machine_options(),
+            width=400,
+            height=35,
+            font=("Arial", 12),
+            dropdown_font=("Arial", 11)
+        )
+        self.machine_selector.pack(fill="x", pady=(0, 10))
+
+        # Selector de cangilón
+        cangilon_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
+        cangilon_frame.pack(pady=20, padx=30, fill="x")
+
+        ctk.CTkLabel(
+            cangilon_frame,
+            text="🎯 Posición del Cangilón:",
+            font=("Arial", 14, "bold")
+        ).pack(anchor="w", pady=(0, 8))
+
+        # Frame para el spinbox con flechas
+        spinbox_frame = ctk.CTkFrame(cangilon_frame, corner_radius=8)
+        spinbox_frame.pack(fill="x")
+
+        # Botón flecha abajo
+        down_button = ctk.CTkButton(
+            spinbox_frame,
+            text="▼",
+            width=50,
+            height=35,
+            command=self.decrease_cangilon,
+            fg_color="#FF6B6B",
+            hover_color="#FF5252"
+        )
+        down_button.pack(side="left", padx=10, pady=10)
+
+        # Entry para mostrar el valor
+        self.cangilon_entry = ctk.CTkEntry(
+            spinbox_frame,
+            textvariable=self.cangilon_var,
+            width=100,
+            height=35,
+            font=("Arial", 14, "bold"),
+            justify="center"
+        )
+        self.cangilon_entry.pack(side="left", padx=10, pady=10)
+
+        # Botón flecha arriba
+        up_button = ctk.CTkButton(
+            spinbox_frame,
+            text="▲",
+            width=50,
+            height=35,
+            command=self.increase_cangilon,
+            fg_color="#4CAF50",
+            hover_color="#45A049"
+        )
+        up_button.pack(side="left", padx=10, pady=10)
+
+        # Label informativo
+        info_label = ctk.CTkLabel(
+            spinbox_frame,
+            text="(Rango: 1-255)",
+            font=("Arial", 10),
+            text_color="#888888"
+        )
+        info_label.pack(side="left", padx=20, pady=10)
+
+        # Botón Mover
+        move_button = ctk.CTkButton(
+            controls_frame,
+            text="🚀 MOVER",
+            command=self.send_move_command,
+            height=50,
+            font=("Arial", 16, "bold"),
+            fg_color="#2196F3",
+            hover_color="#1976D2"
+        )
+        move_button.pack(pady=30, padx=30, fill="x")
+
+        # Zona de notificaciones
+        notification_frame = ctk.CTkFrame(main_frame, corner_radius=12)
+        notification_frame.pack(padx=40, pady=(
+            20, 40), fill="both", expand=True)
+
+        ctk.CTkLabel(
+            notification_frame,
+            text="📢 Resultado de la Operación:",
+            font=("Arial", 14, "bold")
+        ).pack(anchor="w", padx=20, pady=(15, 5))
+
+        # Área de texto para notificaciones
+        self.notification_text = ctk.CTkTextbox(
+            notification_frame,
+            height=150,
+            font=("Arial", 11),
+            wrap="word"
+        )
+        self.notification_text.pack(
+            padx=20, pady=(5, 20), fill="both", expand=True)
+
+        # Mensaje inicial
+        self.add_notification(
+            "Sistema listo. Seleccione una máquina y posición para mover el carrusel.", "info")
+
+    def load_available_machines(self):
+        """Carga la lista de máquinas disponibles desde la configuración."""
+        self.available_machines = []
+        try:
+            if os.path.exists("config_multi_plc.json"):
+                with open("config_multi_plc.json", "r", encoding="utf-8") as f:
+                    multi_config = json.load(f)
+                    machines = multi_config.get("plc_machines", [])
+                    self.available_machines = machines
+            else:
+                # Fallback para configuración single-PLC
+                single_machine = {
+                    "id": "single_plc",
+                    "name": "PLC Principal",
+                    "ip": self.config.get("ip", "192.168.1.50"),
+                    "port": self.config.get("port", 3200),
+                    "simulator": self.config.get("simulator_enabled", False)
+                }
+                self.available_machines = [single_machine]
+        except Exception as e:
+            debug_print(f"Error cargando máquinas: {e}")
+            self.available_machines = []
+
+    def get_machine_options(self):
+        """Obtiene las opciones del selector de máquinas."""
+        if not self.available_machines:
+            return ["No hay máquinas configuradas"]
+
+        options = []
+        for machine in self.available_machines:
+            option = f"{machine['name']} ({machine['id']})"
+            options.append(option)
+
+        # Seleccionar la primera máquina por defecto
+        if options and not self.selected_machine_var.get():
+            self.selected_machine_var.set(options[0])
+
+        return options
+
+    def get_selected_machine_id(self):
+        """Extrae el ID de la máquina seleccionada."""
+        selected = self.selected_machine_var.get()
+        if not selected or selected == "No hay máquinas configuradas":
+            return None
+
+        # Extraer el ID entre paréntesis
+        import re
+        match = re.search(r'\(([^)]+)\)$', selected)
+        if match:
+            return match.group(1)
+        return None
+
+    def increase_cangilon(self):
+        """Incrementa el valor del cangilón."""
+        current = self.cangilon_var.get()
+        if current < 255:
+            self.cangilon_var.set(current + 1)
+
+    def decrease_cangilon(self):
+        """Decrementa el valor del cangilón."""
+        current = self.cangilon_var.get()
+        if current > 1:
+            self.cangilon_var.set(current - 1)
+
+    def add_notification(self, message, msg_type="info"):
+        """Agrega una notificación al área de resultados."""
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+
+        # Emojis según el tipo
+        emoji_map = {
+            "info": "ℹ️",
+            "success": "✅",
+            "error": "❌",
+            "warning": "⚠️"
+        }
+
+        emoji = emoji_map.get(msg_type, "ℹ️")
+        formatted_message = f"[{timestamp}] {emoji} {message}\n"
+
+        # Agregar al textbox
+        self.notification_text.insert("end", formatted_message)
+        self.notification_text.see("end")  # Scroll al final
+
+    def send_move_command(self):
+        """Envía comando de movimiento al carrusel seleccionado."""
+        if not self.command_handler.can_send_command():
+            self.add_notification(
+                "Espere 3 segundos antes de enviar otro comando.", "warning")
+            return
+
+        # Validar selección de máquina
+        machine_id = self.get_selected_machine_id()
+        if not machine_id:
+            self.add_notification(
+                "Por favor, seleccione una máquina válida.", "error")
+            return
+
+        # Obtener posición del cangilón
+        cangilon_position = self.cangilon_var.get()
+
+        # Validar rango
+        if not (1 <= cangilon_position <= 255):
+            self.add_notification(
+                "La posición del cangilón debe estar entre 1 y 255.", "error")
+            return
+
+        try:
+            # Obtener información de la máquina seleccionada
+            selected_machine = None
+            for machine in self.available_machines:
+                if machine["id"] == machine_id:
+                    selected_machine = machine
+                    break
+
+            if not selected_machine:
+                self.add_notification(
+                    f"No se encontró la máquina {machine_id}.", "error")
+                return
+
+            self.add_notification(
+                f"Enviando comando a {selected_machine['name']}...", "info")
+            self.add_notification(
+                f"Moviendo carrusel a posición {cangilon_position}", "info")
+
+            # Determinar el puerto de la API
+            api_port = self._get_api_port()
+
+            # Construir payload para comando
+            if len(self.available_machines) > 1:  # Multi-PLC
+                url = f"http://localhost:{api_port}/v1/multi-plc/command"
+                payload = {
+                    "machine_id": machine_id,
+                    "command": 1,  # Comando de movimiento
+                    "argument": cangilon_position
+                }
+            else:  # Single-PLC
+                url = f"http://localhost:{api_port}/v1/command"
+                payload = {
+                    "command": 1,
+                    "argument": cangilon_position
+                }
+
+            # Enviar comando via API REST
+            import requests
+            response = requests.post(url, json=payload, timeout=5)
+
+            if response.status_code == 200:
+                result = response.json()
+                self.command_handler.send_command(1, cangilon_position)
+                self.add_notification(
+                    f"✅ Comando enviado exitosamente a {selected_machine['name']}", "success")
+                self.add_notification(
+                    f"Respuesta: {result.get('message', 'OK')}", "success")
+            else:
+                error_msg = response.json().get('error', 'Error desconocido')
+                self.add_notification(
+                    f"Error del servidor: {error_msg}", "error")
+
+        except requests.exceptions.RequestException as e:
+            self.add_notification(f"Error de conexión: {str(e)}", "error")
+        except Exception as e:
+            self.add_notification(f"Error inesperado: {str(e)}", "error")
 
     def create_estado_frame(self, parent):
         """Frame para mostrar el estado de múltiples PLCs con sistema de cards"""
