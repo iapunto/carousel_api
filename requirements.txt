@@ -21,4 +21,5 @@ pytest
 pytest-cov
 filelock>=3.18.0
 websockets>=11.0.3
+websocket-client>=1.6.0
 asyncio

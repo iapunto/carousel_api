@@ -300,51 +300,210 @@ class MainWindow:
         send_button.grid(row=2, column=0, columnspan=2, pady=10)
 
     def create_estado_frame(self, parent):
-        """Frame para mostrar el estado del PLC"""
-        status_frame = ctk.CTkFrame(parent, corner_radius=10)
-        status_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        """Frame para mostrar el estado de múltiples PLCs con sistema de cards"""
+        # Frame principal con scroll
+        main_frame = ctk.CTkFrame(parent, corner_radius=10)
+        main_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
-        # Título
+        # Título del dashboard
         title_label = ctk.CTkLabel(
-            status_frame, text="Estado del Sistema", font=("Arial", 14, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2,
-                         pady=(5, 10), sticky="w")
+            main_frame, text="Dashboard Multi-PLC", font=("Arial", 16, "bold"))
+        title_label.pack(pady=(15, 10))
 
-        # Etiquetas de estado
-        self.status_labels = {}
-        row = 1
-        for key in ["READY", "RUN", "MODO_OPERACION", "ALARMA", "PARADA_EMERGENCIA", "VFD", "ERROR_POSICIONAMIENTO"]:
-            label_key = ctk.CTkLabel(
-                status_frame, text=f"{key}:", font=("Arial", 12))
-            label_key.grid(row=row, column=0, padx=10, pady=5, sticky="w")
+        # Frame scrollable para las cards
+        self.scrollable_frame = ctk.CTkScrollableFrame(
+            main_frame, corner_radius=8, height=400)
+        self.scrollable_frame.pack(padx=15, pady=10, fill="both", expand=True)
 
-            label_value = ctk.CTkLabel(
-                status_frame, text="---", font=("Arial", 12))
-            label_value.grid(row=row, column=1, padx=10, pady=5, sticky="w")
+        # Diccionario para almacenar las cards de máquinas
+        self.machine_cards = {}
 
-            self.status_labels[key] = label_value
-            row += 1
+        # Cargar y crear cards para las máquinas configuradas
+        self.load_and_create_machine_cards()
 
-        # Posición actual
-        pos_label_key = ctk.CTkLabel(
-            status_frame, text="POSICIÓN ACTUAL:", font=("Arial", 12))
-        pos_label_key.grid(row=row, column=0, padx=10, pady=5, sticky="w")
+        # Mensaje de información si no hay máquinas
+        if not self.machine_cards:
+            self.show_no_machines_message()
 
-        self.position_label = ctk.CTkLabel(
-            status_frame, text="---", font=("Arial", 12))
-        self.position_label.grid(
-            row=row, column=1, padx=10, pady=5, sticky="w")
+    def load_and_create_machine_cards(self):
+        """Carga la configuración de máquinas y crea las cards correspondientes"""
+        try:
+            # Intentar cargar configuración multi-PLC
+            if os.path.exists("config_multi_plc.json"):
+                with open("config_multi_plc.json", "r", encoding="utf-8") as f:
+                    multi_config = json.load(f)
+                    machines = multi_config.get("plc_machines", [])
+
+                for machine in machines:
+                    self.create_machine_card(machine)
+            else:
+                # Fallback: crear una card para configuración single-PLC
+                single_machine = {
+                    "id": "single_plc",
+                    "name": "PLC Principal",
+                    "ip": self.config.get("ip", "192.168.1.50"),
+                    "port": self.config.get("port", 3200),
+                    "simulator": self.config.get("simulator_enabled", False),
+                    "description": "Configuración Single-PLC"
+                }
+                self.create_machine_card(single_machine)
+
+        except Exception as e:
+            debug_print(f"Error cargando configuración de máquinas: {e}")
+
+    def create_machine_card(self, machine):
+        """Crea una card individual para una máquina"""
+        machine_id = machine["id"]
+
+        # Frame principal de la card
+        card_frame = ctk.CTkFrame(
+            self.scrollable_frame, corner_radius=12, height=200)
+        card_frame.pack(padx=10, pady=8, fill="x")
+        card_frame.pack_propagate(False)  # Mantener altura fija
+
+        # Header de la card con información de la máquina
+        header_frame = ctk.CTkFrame(card_frame, corner_radius=8, height=60)
+        header_frame.pack(padx=10, pady=(10, 5), fill="x")
+        header_frame.pack_propagate(False)
+
+        # Título y estado de conexión
+        title_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        title_frame.pack(side="left", fill="both",
+                         expand=True, padx=10, pady=10)
+
+        machine_title = ctk.CTkLabel(
+            title_frame,
+            text=machine["name"],
+            font=("Arial", 14, "bold"),
+            anchor="w"
+        )
+        machine_title.pack(anchor="w")
+
+        connection_info = ctk.CTkLabel(
+            title_frame,
+            text=f"ID: {machine_id} | {machine['ip']}:{machine['port']} | {'Simulador' if machine.get('simulator', False) else 'Real'}",
+            font=("Arial", 10),
+            text_color="#888888",
+            anchor="w"
+        )
+        connection_info.pack(anchor="w")
+
+        # Indicador de estado de conexión
+        status_indicator = ctk.CTkFrame(
+            header_frame, width=80, height=40, corner_radius=6)
+        status_indicator.pack(side="right", padx=10, pady=10)
+        status_indicator.pack_propagate(False)
+
+        status_label = ctk.CTkLabel(
+            status_indicator,
+            text="Desconectado",
+            font=("Arial", 10, "bold"),
+            text_color="#FF3333"
+        )
+        status_label.pack(expand=True)
+
+        # Frame para los datos de estado
+        data_frame = ctk.CTkFrame(card_frame, corner_radius=8)
+        data_frame.pack(padx=10, pady=5, fill="both", expand=True)
+
+        # Grid para los estados principales
+        status_grid = ctk.CTkFrame(data_frame, fg_color="transparent")
+        status_grid.pack(padx=10, pady=10, fill="both", expand=True)
+
+        # Crear labels para estados principales
+        status_labels = {}
+        main_statuses = ["READY", "RUN", "MODO_OPERACION", "ALARMA"]
+
+        for i, status_key in enumerate(main_statuses):
+            row = i // 2
+            col = i % 2
+
+            status_frame = ctk.CTkFrame(
+                status_grid, corner_radius=6, height=25)
+            status_frame.grid(row=row, column=col, padx=5, pady=2, sticky="ew")
+            status_frame.pack_propagate(False)
+
+            key_label = ctk.CTkLabel(
+                status_frame,
+                text=f"{status_key}:",
+                font=("Arial", 9, "bold"),
+                width=80
+            )
+            key_label.pack(side="left", padx=(8, 2), pady=5)
+
+            value_label = ctk.CTkLabel(
+                status_frame,
+                text="---",
+                font=("Arial", 9),
+                text_color="#CCCCCC"
+            )
+            value_label.pack(side="left", padx=(2, 8), pady=5)
+
+            status_labels[status_key] = value_label
+
+        # Configurar grid weights
+        status_grid.grid_columnconfigure(0, weight=1)
+        status_grid.grid_columnconfigure(1, weight=1)
+
+        # Frame para posición
+        position_frame = ctk.CTkFrame(data_frame, corner_radius=6, height=30)
+        position_frame.pack(padx=10, pady=(0, 10), fill="x")
+        position_frame.pack_propagate(False)
+
+        pos_label = ctk.CTkLabel(
+            position_frame,
+            text="POSICIÓN:",
+            font=("Arial", 11, "bold")
+        )
+        pos_label.pack(side="left", padx=10, pady=8)
+
+        position_value = ctk.CTkLabel(
+            position_frame,
+            text="---",
+            font=("Arial", 11, "bold"),
+            text_color="#00AAFF"
+        )
+        position_value.pack(side="right", padx=10, pady=8)
+
+        # Almacenar referencias para actualización
+        self.machine_cards[machine_id] = {
+            "card_frame": card_frame,
+            "status_indicator": status_label,
+            "status_labels": status_labels,
+            "position_label": position_value,
+            "machine_info": machine
+        }
+
+    def show_no_machines_message(self):
+        """Muestra mensaje cuando no hay máquinas configuradas"""
+        message_frame = ctk.CTkFrame(self.scrollable_frame, corner_radius=10)
+        message_frame.pack(padx=20, pady=50, fill="x")
+
+        ctk.CTkLabel(
+            message_frame,
+            text="⚠️ No hay máquinas configuradas",
+            font=("Arial", 16, "bold"),
+            text_color="#FF8800"
+        ).pack(pady=20)
+
+        ctk.CTkLabel(
+            message_frame,
+            text="Use el botón 'Configurar Máquinas' en la pestaña de configuración\npara añadir máquinas al sistema.",
+            font=("Arial", 12),
+            text_color="#888888"
+        ).pack(pady=(0, 20))
 
     def show_waiting_message(self):
         """
-        Muestra 'Esperando conexión...' en los labels de estado y posición.
+        Muestra 'Esperando conexión...' en todas las cards de máquinas.
         """
-        if hasattr(self, 'status_labels'):
-            for label in self.status_labels.values():
-                label.configure(text="Esperando conexión...",
-                                text_color="gray")
-        if hasattr(self, 'position_label'):
-            self.position_label.configure(text="---", text_color="gray")
+        for machine_id, card_data in self.machine_cards.items():
+            card_data["status_indicator"].configure(
+                text="Conectando...", text_color="#FFA500")
+            for label in card_data["status_labels"].values():
+                label.configure(text="Esperando...", text_color="gray")
+            card_data["position_label"].configure(
+                text="---", text_color="gray")
 
     def create_config_frame(self, parent):
         """Frame para configuración del sistema multi-PLC"""
@@ -476,73 +635,149 @@ class MainWindow:
 
     def start_socketio_listener(self):
         """
-        Inicia un hilo que escucha el backend Flask-SocketIO y actualiza la GUI en tiempo real.
+        Inicia un hilo que escucha el servidor WebSocket y actualiza la GUI en tiempo real.
         """
-        def sio_thread_func():
-            self.sio = socketio.Client()
+        def ws_thread_func():
+            import websocket
 
-            @self.sio.event
-            def connect():
-                debug_print("Socket.IO conectado")
-                self.root.after(0, self.set_ws_status, True)
+            def on_message(ws, message):
+                try:
+                    data = json.loads(message)
+                    self.root.after(0, self.update_status_from_ws, data)
+                except Exception as e:
+                    debug_print(f"Error procesando mensaje WebSocket: {e}")
 
-            @self.sio.event
-            def disconnect():
-                debug_print("Socket.IO desconectado")
+            def on_error(ws, error):
+                debug_print(f"Error WebSocket: {error}")
                 self.root.after(0, self.set_ws_status, False)
                 self.root.after(0, self.show_ws_error,
-                                "Conexión Socket.IO perdida")
+                                f"Error de conexión: {str(error)}")
 
-            @self.sio.on('plc_status')
-            def on_plc_status(data):
-                self.root.after(0, self.update_status_from_ws, data)
+            def on_close(ws, close_status_code, close_msg):
+                debug_print("WebSocket desconectado")
+                self.root.after(0, self.set_ws_status, False)
 
-            @self.sio.on('plc_status_error')
-            def on_plc_status_error(data):
-                self.root.after(0, self.show_ws_error, data.get(
-                    'error', 'Error desconocido'))
+            def on_open(ws):
+                debug_print("WebSocket conectado")
+                self.root.after(0, self.set_ws_status, True)
+                # Suscribirse a actualizaciones de estado
+                ws.send(json.dumps({
+                    "type": "subscribe",
+                    "subscription_type": "status_updates"
+                }))
 
             while not self._stop_sio:
                 try:
-                    # Obtener puerto correcto según configuración multi-PLC o single-PLC
-                    api_port = self._get_api_port()
-                    self.sio.connect(
-                        f"http://localhost:{api_port}", transports=['websocket'], wait_timeout=5)
-                    self.sio.wait()
+                    # Conectar al servidor WebSocket (puerto 8765)
+                    ws_url = "ws://localhost:8765"
+                    ws = websocket.WebSocketApp(
+                        ws_url,
+                        on_open=on_open,
+                        on_message=on_message,
+                        on_error=on_error,
+                        on_close=on_close
+                    )
+
+                    ws.run_forever(reconnect=5)
+
                 except Exception as e:
-                    debug_print(f"Fallo conexión Socket.IO: {e}")
+                    debug_print(f"Fallo conexión WebSocket: {e}")
                     self.root.after(0, self.set_ws_status, False)
                     import time
                     time.sleep(5)
 
-        self.sio_thread = threading.Thread(target=sio_thread_func, daemon=True)
-        self.sio_thread.start()
+        self.ws_thread = threading.Thread(target=ws_thread_func, daemon=True)
+        self.ws_thread.start()
 
     def update_status_from_ws(self, status_data):
         """
-        Actualiza la GUI con datos recibidos por WebSocket.
+        Actualiza la GUI con datos recibidos por WebSocket (multi-PLC y single-PLC).
         """
         self.first_status_received = True
-        data = status_data.get('data', {})
+
+        # Detectar tipo de mensaje (SocketIO legacy vs WebSocket multi-PLC)
+        if 'type' in status_data and status_data['type'] == 'status_broadcast':
+            # Datos del WebSocket multi-PLC
+            machines_status = status_data.get('status', {})
+            self.update_multi_plc_status(machines_status)
+        else:
+            # Datos legacy de SocketIO (single-PLC)
+            data = status_data.get('data', {})
+            self.update_single_plc_status(data)
+
+    def update_multi_plc_status(self, machines_status):
+        """Actualiza el estado de múltiples máquinas en el dashboard."""
+        for machine_id, machine_data in machines_status.items():
+            if machine_id in self.machine_cards:
+                card = self.machine_cards[machine_id]
+
+                if 'error' in machine_data:
+                    # Error de comunicación con la máquina
+                    card["status_indicator"].configure(
+                        text="Error", text_color="#FF3333")
+                    for label in card["status_labels"].values():
+                        label.configure(text="Error", text_color="#FF3333")
+                    card["position_label"].configure(
+                        text="---", text_color="#FF3333")
+                else:
+                    # Actualizar estado normal
+                    interpreted_status = interpretar_estado_plc(
+                        machine_data.get('status_code', 0))
+
+                    # Actualizar indicador de conexión
+                    card["status_indicator"].configure(
+                        text="Conectado", text_color="#00FF00")
+
+                    # Actualizar estados principales
+                    for key, label in card["status_labels"].items():
+                        value = interpreted_status.get(key, "Desconocido")
+                        color = self.get_status_color(value)
+                        label.configure(text=value, text_color=color)
+
+                    # Actualizar posición
+                    position = machine_data.get('position', "---")
+                    card["position_label"].configure(
+                        text=str(position), text_color="#00AAFF")
+
+        debug_print(
+            f"[DEBUG] Estado multi-PLC actualizado: {len(machines_status)} máquinas")
+
+    def update_single_plc_status(self, data):
+        """Actualiza el estado para modo single-PLC (legacy)."""
         interpreted_status = interpretar_estado_plc(data.get('status_code', 0))
-        for key, label in self.status_labels.items():
-            value = interpreted_status.get(key, "Desconocido")
-            # Colores personalizados según el estado
-            if value in ["OK", "Remoto", "Desactivada", "El variador de velocidad está OK", "El equipo está listo para operar"]:
-                # Verde brillante
-                label.configure(text=value, text_color="#00FF00")
-            elif value in ["Fallo", "Activa", "Manual", "Error en el variador de velocidad", "Alarma activa", "El equipo no puede operar"]:
-                label.configure(text=value, text_color="#FF3333")  # Rojo
-            elif value in ["Sin parada de emergencia", "No hay alarma", "No hay error de posicionamiento"]:
-                label.configure(text=value, text_color="#FFD700")  # Amarillo
-            else:
-                # Blanco por defecto
-                label.configure(text=value, text_color="#FFFFFF")
-        self.position_label.configure(
-            text=str(data.get('position', "---")), text_color="#FFFFFF")
-        debug_print(f"[DEBUG] status_data recibido: {status_data}")
-        debug_print(f"[DEBUG] data['position']: {data.get('position')}")
-        debug_print(f"Estado actualizado (Socket.IO): {interpreted_status}")
+
+        # Buscar la card del PLC principal
+        if "single_plc" in self.machine_cards:
+            card = self.machine_cards["single_plc"]
+
+            # Actualizar indicador de conexión
+            card["status_indicator"].configure(
+                text="Conectado", text_color="#00FF00")
+
+            # Actualizar estados
+            for key, label in card["status_labels"].items():
+                value = interpreted_status.get(key, "Desconocido")
+                color = self.get_status_color(value)
+                label.configure(text=value, text_color=color)
+
+            # Actualizar posición
+            position = data.get('position', "---")
+            card["position_label"].configure(
+                text=str(position), text_color="#00AAFF")
+
+        debug_print(
+            f"[DEBUG] Estado single-PLC actualizado: {interpreted_status}")
+
+    def get_status_color(self, value):
+        """Obtiene el color apropiado para un valor de estado."""
+        if value in ["OK", "Remoto", "Desactivada", "El variador de velocidad está OK", "El equipo está listo para operar"]:
+            return "#00FF00"  # Verde brillante
+        elif value in ["Fallo", "Activa", "Manual", "Error en el variador de velocidad", "Alarma activa", "El equipo no puede operar"]:
+            return "#FF3333"  # Rojo
+        elif value in ["Sin parada de emergencia", "No hay alarma", "No hay error de posicionamiento"]:
+            return "#FFD700"  # Amarillo
+        else:
+            return "#FFFFFF"  # Blanco por defecto
 
     def show_ws_error(self, msg):
         """
@@ -551,25 +786,25 @@ class MainWindow:
         if getattr(self, 'error_popup_open', False):
             return  # Ya hay un popup abierto
         self.error_popup_open = True
-        # Mostrar el error en los labels de estado
-        if hasattr(self, 'status_labels'):
-            for label in self.status_labels.values():
+
+        # Mostrar el error en todas las cards de máquinas
+        for machine_id, card_data in self.machine_cards.items():
+            card_data["status_indicator"].configure(
+                text="Sin conexión", text_color="#FF3333")
+            for label in card_data["status_labels"].values():
                 label.configure(text="Error de comunicación", text_color="red")
-        if hasattr(self, 'position_label'):
-            self.position_label.configure(text="---", text_color="red")
+            card_data["position_label"].configure(text="---", text_color="red")
 
         def on_close():
             self.error_popup_open = False
         # Mostrar popup y restaurar bandera al cerrarse
-        messagebox.showwarning("Socket.IO", msg)
+        messagebox.showwarning("WebSocket", msg)
         on_close()
 
     def close(self):
         self._stop_sio = True
-        if self.sio:
-            self.sio.disconnect()
-        if self.sio_thread:
-            self.sio_thread.join(timeout=2)
+        if hasattr(self, 'ws_thread'):
+            self.ws_thread.join(timeout=2)
 
     def launch_web_app(self):
         """Lanza la app web en un proceso aparte si no está corriendo."""
