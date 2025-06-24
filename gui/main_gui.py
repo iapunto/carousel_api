@@ -21,6 +21,7 @@ import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc, debug_print
 import socketio
 import requests
+from gui.config_window import show_config_window
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -397,6 +398,15 @@ class MainWindow:
         ctk.CTkButton(config_frame, text="Desinstalar servicio App Web", command=self.uninstall_webapp_service, fg_color="#dc3545", hover_color="#a71d2a").grid(
             row=7, column=1, pady=10)
 
+        # Separador
+        ctk.CTkLabel(config_frame, text="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", text_color="gray").grid(
+            row=8, column=0, columnspan=2, pady=10)
+
+        # Botón para configurar máquinas
+        ctk.CTkButton(config_frame, text="⚙️ Configurar Máquinas", command=self.open_machine_config,
+                      fg_color="#6f42c1", hover_color="#5a2d91", font=("Arial", 12, "bold")).grid(
+            row=9, column=0, columnspan=2, pady=10, sticky="ew")
+
     def save_config(self):
         """Guarda la configuración IP/puerto en config.json"""
         try:
@@ -435,6 +445,19 @@ class MainWindow:
         self.config["simulator_enabled"] = self.dev_mode_var.get()
         with open(CONFIG_FILE, 'w') as f:
             json.dump(self.config, f)
+
+    def open_machine_config(self):
+        """Abre la ventana de configuración de máquinas."""
+        try:
+            show_config_window(self.root, self.on_config_changed)
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"No se pudo abrir la configuración de máquinas: {str(e)}")
+
+    def on_config_changed(self):
+        """Callback ejecutado cuando la configuración de máquinas cambia."""
+        messagebox.showinfo(
+            "Configuración", "La configuración ha sido actualizada.\n\nLos cambios se aplicarán al reiniciar la aplicación.")
 
     def start_socketio_listener(self):
         """

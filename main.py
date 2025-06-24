@@ -40,11 +40,23 @@ Actualizado: 2025-06-14
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
+MULTI_PLC_CONFIG_FILE = "config_multi_plc.json"
 DEFAULT_CONFIG = {
     "ip": "192.168.1.50",
     "port": 3200,
     "simulator_enabled": False
 }
+
+
+def load_multi_plc_config():
+    """Carga la configuración multi-PLC desde archivo JSON"""
+    if os.path.exists(MULTI_PLC_CONFIG_FILE):
+        with open(MULTI_PLC_CONFIG_FILE, "r", encoding="utf-8") as f:
+            config = json.load(f)
+            debug_print(
+                f"Configuración multi-PLC cargada: {len(config.get('plc_machines', []))} máquinas")
+            return config
+    return None
 
 
 def load_config():
@@ -217,6 +229,7 @@ def run_backend(config):
             except Exception as e:
                 socketio.emit('plc_status_error', {'error': str(e)})
             eventlet.sleep(interval)
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s %(levelname)s %(name)s: %(message)s',
@@ -225,12 +238,30 @@ def run_backend(config):
             logging.StreamHandler()
         ]
     )
-    plc = create_plc_instance(config)
-    flask_app = create_app(plc)
+
+    # Verificar si hay configuración multi-PLC
+    multi_plc_config = load_multi_plc_config()
+    if multi_plc_config:
+        debug_print("🔄 Iniciando en modo MULTI-PLC")
+        # Importar PLCManager para modo multi-PLC
+        from models.plc_manager import PLCManager
+        plc_manager = PLCManager(multi_plc_config["plc_machines"])
+        flask_app = create_app(plc_manager=plc_manager)
+        debug_print(
+            f"✅ Sistema multi-PLC iniciado con {len(multi_plc_config['plc_machines'])} máquinas")
+    else:
+        debug_print("🔄 Iniciando en modo SINGLE-PLC (fallback)")
+        # Modo single-PLC original
+        plc = create_plc_instance(config)
+        flask_app = create_app(plc)
+        eventlet.spawn_n(monitor_plc_status, socketio, plc, 1.0)
+        debug_print("✅ Sistema single-PLC iniciado")
+
     socketio = SocketIO(flask_app, cors_allowed_origins="*",
                         async_mode="eventlet")
-    eventlet.spawn_n(monitor_plc_status, socketio, plc, 1.0)
-    socketio.run(flask_app, host="0.0.0.0", port=config.get("api_port", 5000))
+    api_port = multi_plc_config.get("api_config", {}).get(
+        "port", 5000) if multi_plc_config else config.get("api_port", 5000)
+    socketio.run(flask_app, host="0.0.0.0", port=api_port)
 
 
 if __name__ == "__main__":
