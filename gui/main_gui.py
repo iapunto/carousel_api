@@ -113,6 +113,10 @@ class MainWindow:
 
         self.error_popup_open = False  # Bandera para evitar popups en bucle
 
+        # Configurar watcher para detectar cambios en configuración
+        self.config_file_mtime = None
+        self.setup_config_watcher()
+
     def create_header(self):
         """Crea la cabecera con el logo y el botón de salir."""
         header_frame = ctk.CTkFrame(
@@ -900,8 +904,131 @@ class MainWindow:
 
     def on_config_changed(self):
         """Callback ejecutado cuando la configuración de máquinas cambia."""
-        messagebox.showinfo(
-            "Configuración", "La configuración ha sido actualizada.\n\nLos cambios se aplicarán al reiniciar la aplicación.")
+        try:
+            # Recargar la configuración automáticamente
+            self.reload_dashboard_configuration()
+
+            # Mostrar notificación de éxito
+            messagebox.showinfo(
+                "Configuración Actualizada",
+                "✅ La configuración ha sido actualizada correctamente.\n\n"
+                "El dashboard y el panel de comandos se han actualizado automáticamente."
+            )
+        except Exception as e:
+            # Si hay error, mostrar mensaje de reinicio
+            messagebox.showerror(
+                "Error de Actualización",
+                f"❌ Error al actualizar la configuración: {str(e)}\n\n"
+                "Por favor, reinicie la aplicación para aplicar los cambios."
+            )
+
+    def reload_dashboard_configuration(self):
+        """Recarga la configuración del dashboard sin reiniciar la aplicación."""
+        try:
+            # 1. Limpiar cards existentes
+            self.clear_machine_cards()
+
+            # 2. Recargar lista de máquinas disponibles
+            self.load_available_machines()
+
+            # 3. Recrear las cards del dashboard
+            self.load_and_create_machine_cards()
+
+            # 4. Actualizar el selector de máquinas en el panel de comandos
+            self.update_machine_selector()
+
+            # 5. Mostrar mensaje de espera en las nuevas cards
+            self.show_waiting_message()
+
+            debug_print("✅ Dashboard actualizado correctamente")
+
+        except Exception as e:
+            debug_print(f"❌ Error recargando dashboard: {e}")
+            raise
+
+    def clear_machine_cards(self):
+        """Limpia todas las cards de máquinas del dashboard."""
+        try:
+            # Destruir todos los widgets de las cards
+            for machine_id, card_data in self.machine_cards.items():
+                if card_data["card_frame"].winfo_exists():
+                    card_data["card_frame"].destroy()
+
+            # Limpiar el diccionario
+            self.machine_cards.clear()
+
+            # Limpiar cualquier widget hijo restante en el scrollable_frame
+            for widget in self.scrollable_frame.winfo_children():
+                widget.destroy()
+
+            debug_print("🧹 Cards del dashboard limpiadas")
+
+        except Exception as e:
+            debug_print(f"Error limpiando cards: {e}")
+            raise
+
+    def update_machine_selector(self):
+        """Actualiza el selector de máquinas en el panel de comandos."""
+        try:
+            if hasattr(self, 'machine_selector'):
+                # Obtener nuevas opciones
+                new_options = self.get_machine_options()
+
+                # Actualizar el ComboBox
+                self.machine_selector.configure(values=new_options)
+
+                # Seleccionar la primera opción si hay máquinas disponibles
+                if new_options and new_options[0] != "No hay máquinas configuradas":
+                    self.selected_machine_var.set(new_options[0])
+                else:
+                    self.selected_machine_var.set("")
+
+                debug_print("🔄 Selector de máquinas actualizado")
+
+        except Exception as e:
+            debug_print(f"Error actualizando selector de máquinas: {e}")
+
+    def setup_config_watcher(self):
+        """Configura el watcher para detectar cambios en el archivo de configuración."""
+        try:
+            config_file = "config_multi_plc.json"
+            if os.path.exists(config_file):
+                self.config_file_mtime = os.path.getmtime(config_file)
+
+            # Iniciar el chequeo periódico
+            self.check_config_changes()
+
+        except Exception as e:
+            debug_print(f"Error configurando watcher: {e}")
+
+    def check_config_changes(self):
+        """Chequea si el archivo de configuración ha cambiado."""
+        try:
+            config_file = "config_multi_plc.json"
+            if os.path.exists(config_file):
+                current_mtime = os.path.getmtime(config_file)
+
+                # Si el archivo ha sido modificado
+                if self.config_file_mtime and current_mtime != self.config_file_mtime:
+                    debug_print(
+                        "🔄 Detectado cambio en configuración, actualizando dashboard...")
+                    self.config_file_mtime = current_mtime
+
+                    # Recargar configuración automáticamente
+                    self.reload_dashboard_configuration()
+
+                    # Mostrar notificación discreta
+                    if hasattr(self, 'add_notification'):
+                        self.add_notification(
+                            "Configuración actualizada automáticamente", "success")
+
+                self.config_file_mtime = current_mtime
+
+        except Exception as e:
+            debug_print(f"Error chequeando cambios de configuración: {e}")
+
+        # Programar próximo chequeo en 3 segundos
+        self.root.after(3000, self.check_config_changes)
 
     def _get_api_port(self):
         """Obtiene el puerto de la API según la configuración actual"""
