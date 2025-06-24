@@ -20,3 +20,5 @@ urllib3>=2.5.0
 pytest
 pytest-cov
 filelock>=3.18.0
+websockets>=11.0.3
+asyncio

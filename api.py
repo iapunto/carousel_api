@@ -24,12 +24,17 @@ from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY, BAD_COMMAND, BAD_REQUE
 from filelock import Timeout
 
 
-def create_app(plc):
+def create_app(plc=None, plc_manager=None):
     """
     Crea la instancia de la aplicación Flask.
     Incluye configuración de CORS segura, logging y manejo global de errores.
+
     Args:
-        plc: Instancia del PLC (real o simulador) [[6]]
+        plc: Instancia del PLC (real o simulador) para modo single-PLC
+        plc_manager: Instancia del PLCManager para modo multi-PLC
+
+    Note:
+        Debe proporcionarse exactamente uno de los dos parámetros
     """
     app = Flask(__name__)
 
@@ -55,11 +60,27 @@ def create_app(plc):
     }
     Swagger(app)
 
-    # Inicializar controlador
-    carousel_controller = CarouselController(plc)
+    # Validar parámetros
+    if not plc and not plc_manager:
+        raise ValueError("Debe proporcionarse 'plc' o 'plc_manager'")
+    if plc and plc_manager:
+        raise ValueError(
+            "Solo puede proporcionarse 'plc' o 'plc_manager', no ambos")
+
+    # Determinar modo de operación
+    is_multi_plc = plc_manager is not None
+
+    # Inicializar controlador para modo single-PLC
+    carousel_controller = CarouselController(plc) if plc else None
 
     # Logging de errores
     logger = logging.getLogger("api")
+
+    if is_multi_plc:
+        logger.info(
+            f"API iniciada en modo MULTI-PLC con {len(plc_manager.get_available_machines())} máquinas")
+    else:
+        logger.info("API iniciada en modo SINGLE-PLC")
 
     @app.errorhandler(Exception)
     def handle_exception(e):
@@ -249,6 +270,331 @@ def create_app(plc):
           200:
             description: API operativa.
         """
-        return jsonify({'status': 'ok'}), 200
+        if is_multi_plc:
+            health_data = plc_manager.health_check()
+            return jsonify({
+                'status': 'ok',
+                'mode': 'multi-plc',
+                'health': health_data
+            }), 200
+        else:
+            return jsonify({
+                'status': 'ok',
+                'mode': 'single-plc'
+            }), 200
+
+    # ================================
+    # ENDPOINTS MULTI-PLC
+    # ================================
+
+    if is_multi_plc:
+
+        @app.route('/v1/machines', methods=['GET'])
+        def get_machines():
+            """
+            Lista todas las máquinas disponibles.
+            ---
+            tags:
+              - Multi-PLC
+            responses:
+              200:
+                description: Lista de máquinas disponibles.
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        success:
+                          type: boolean
+                        data:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                example: "machine_1"
+                              name:
+                                type: string
+                                example: "Carrusel Principal"
+                              ip:
+                                type: string
+                                example: "192.168.1.50"
+                              port:
+                                type: integer
+                                example: 3200
+                              type:
+                                type: string
+                                example: "Real PLC"
+                              status:
+                                type: string
+                                example: "available"
+            """
+            try:
+                logger.info(f"[MACHINES] Petición desde {request.remote_addr}")
+                machines = plc_manager.get_available_machines()
+                logger.info(f"[MACHINES] Respuesta: {len(machines)} máquinas")
+                return jsonify({
+                    'success': True,
+                    'data': machines,
+                    'error': None,
+                    'code': None
+                }), 200
+            except Exception as e:
+                logger.error(
+                    f"[MACHINES] Error para {request.remote_addr}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': f'Error obteniendo lista de máquinas: {str(e)}',
+                    'code': INTERNAL_ERROR
+                }), 500
+
+        @app.route('/v1/machines/<machine_id>/status', methods=['GET'])
+        def get_machine_status(machine_id):
+            """
+            Obtiene el estado de una máquina específica.
+            ---
+            tags:
+              - Multi-PLC
+            parameters:
+              - in: path
+                name: machine_id
+                required: true
+                schema:
+                  type: string
+                  example: "machine_1"
+                description: ID de la máquina
+            responses:
+              200:
+                description: Estado actual de la máquina.
+              404:
+                description: Máquina no encontrada.
+              500:
+                description: Error de comunicación.
+            """
+            try:
+                logger.info(
+                    f"[MACHINE_STATUS] Petición para {machine_id} desde {request.remote_addr}")
+                result = plc_manager.get_machine_status(
+                    machine_id, request.remote_addr)
+                logger.info(
+                    f"[MACHINE_STATUS] Respuesta para {machine_id}: {result}")
+                return jsonify({
+                    'success': True,
+                    'data': result,
+                    'error': None,
+                    'code': None
+                }), 200
+            except ValueError as e:
+                logger.warning(
+                    f"[MACHINE_STATUS] Máquina {machine_id} no encontrada desde {request.remote_addr}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': str(e),
+                    'code': BAD_REQUEST
+                }), 404
+            except Exception as e:
+                logger.error(
+                    f"[MACHINE_STATUS] Error para {machine_id} desde {request.remote_addr}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': f'Error de comunicación con la máquina {machine_id}: {str(e)}',
+                    'code': PLC_CONN_ERROR
+                }), 500
+
+        @app.route('/v1/machines/<machine_id>/command', methods=['POST'])
+        def send_machine_command(machine_id):
+            """
+            Envía un comando a una máquina específica.
+            ---
+            tags:
+              - Multi-PLC
+            parameters:
+              - in: path
+                name: machine_id
+                required: true
+                schema:
+                  type: string
+                  example: "machine_1"
+                description: ID de la máquina
+              - in: body
+                name: Comando
+                required: true
+                schema:
+                  type: object
+                  properties:
+                    command:
+                      type: integer
+                      example: 1
+                      description: Código de comando (0-255)
+                    argument:
+                      type: integer
+                      example: 3
+                      description: Argumento opcional (0-255)
+            responses:
+              200:
+                description: Comando procesado correctamente.
+              400:
+                description: Parámetros inválidos.
+              404:
+                description: Máquina no encontrada.
+              409:
+                description: Máquina ocupada.
+              500:
+                description: Error interno.
+            """
+            if not request.is_json:
+                logger.warning(
+                    f"[MACHINE_COMMAND] Solicitud no JSON para {machine_id} desde {request.remote_addr}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': 'Solicitud debe ser JSON',
+                    'code': BAD_REQUEST
+                }), 400
+
+            data = request.get_json()
+            command = data.get('command')
+            argument = data.get('argument')
+
+            # Validar parámetros
+            if not isinstance(command, int) or not (0 <= command <= 255):
+                logger.warning(
+                    f"[MACHINE_COMMAND] Comando inválido para {machine_id} desde {request.remote_addr}: {command}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': "El parámetro 'command' debe ser un entero entre 0 y 255",
+                    'code': BAD_COMMAND
+                }), 400
+
+            if argument is not None and (not isinstance(argument, int) or not (0 <= argument <= 255)):
+                logger.warning(
+                    f"[MACHINE_COMMAND] Argumento inválido para {machine_id} desde {request.remote_addr}: {argument}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': "El parámetro 'argument' debe ser un entero entre 0 y 255",
+                    'code': BAD_COMMAND
+                }), 400
+
+            try:
+                logger.info(
+                    f"[MACHINE_COMMAND] Comando {command}({argument}) para {machine_id} desde {request.remote_addr}")
+                result = plc_manager.send_command_to_machine(
+                    machine_id, command, argument, request.remote_addr)
+                logger.info(
+                    f"[MACHINE_COMMAND] Respuesta para {machine_id}: {result}")
+                return jsonify({
+                    'success': True,
+                    'data': result,
+                    'error': None,
+                    'code': None
+                }), 200
+            except ValueError as e:
+                logger.warning(
+                    f"[MACHINE_COMMAND] Máquina {machine_id} no encontrada desde {request.remote_addr}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': str(e),
+                    'code': BAD_REQUEST
+                }), 404
+            except Exception as e:
+                logger.error(
+                    f"[MACHINE_COMMAND] Error para {machine_id} desde {request.remote_addr}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': f'Error al procesar comando para {machine_id}: {str(e)}',
+                    'code': INTERNAL_ERROR
+                }), 500
+
+        @app.route('/v1/machines/<machine_id>/move', methods=['POST'])
+        def move_machine_to_position(machine_id):
+            """
+            Mueve una máquina a una posición específica.
+            ---
+            tags:
+              - Multi-PLC
+            parameters:
+              - in: path
+                name: machine_id
+                required: true
+                schema:
+                  type: string
+                  example: "machine_1"
+                description: ID de la máquina
+              - in: body
+                name: Posición
+                required: true
+                schema:
+                  type: object
+                  properties:
+                    position:
+                      type: integer
+                      example: 5
+                      description: Posición objetivo (0-9)
+            responses:
+              200:
+                description: Movimiento iniciado correctamente.
+              400:
+                description: Parámetros inválidos.
+              404:
+                description: Máquina no encontrada.
+              500:
+                description: Error interno.
+            """
+            if not request.is_json:
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': 'Solicitud debe ser JSON',
+                    'code': BAD_REQUEST
+                }), 400
+
+            data = request.get_json()
+            position = data.get('position')
+
+            if not isinstance(position, int) or not (0 <= position <= 9):
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': "El parámetro 'position' debe ser un entero entre 0 y 9",
+                    'code': BAD_COMMAND
+                }), 400
+
+            try:
+                logger.info(
+                    f"[MACHINE_MOVE] Mover {machine_id} a posición {position} desde {request.remote_addr}")
+                result = plc_manager.move_machine_to_position(
+                    machine_id, position, request.remote_addr)
+                logger.info(
+                    f"[MACHINE_MOVE] Respuesta para {machine_id}: {result}")
+                return jsonify({
+                    'success': True,
+                    'data': result,
+                    'error': None,
+                    'code': None
+                }), 200
+            except ValueError as e:
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': str(e),
+                    'code': BAD_REQUEST
+                }), 404
+            except Exception as e:
+                logger.error(
+                    f"[MACHINE_MOVE] Error para {machine_id} desde {request.remote_addr}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': f'Error moviendo {machine_id}: {str(e)}',
+                    'code': INTERNAL_ERROR
+                }), 500
 
     return app
