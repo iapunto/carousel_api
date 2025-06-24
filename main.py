@@ -40,6 +40,7 @@ Actualizado: 2025-06-14
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
+MULTI_PLC_CONFIG_FILE = "config_multi_plc.json"
 DEFAULT_CONFIG = {
     "ip": "192.168.1.50",
     "port": 3200,
@@ -48,38 +49,76 @@ DEFAULT_CONFIG = {
 
 
 def load_config():
-    """Carga la configuración desde archivo JSON"""
+    """Carga la configuración desde archivo JSON, priorizando configuración multi-PLC"""
+    # Intentar cargar configuración multi-PLC primero
+    if os.path.exists(MULTI_PLC_CONFIG_FILE):
+        with open(MULTI_PLC_CONFIG_FILE, "r") as f:
+            config = json.load(f)
+            debug_print(
+                f"Configuración multi-PLC cargada: {len(config.get('plc_machines', []))} máquinas")
+            return config, True  # True indica que es configuración multi-PLC
+
+    # Fallback a configuración single-PLC
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             config = json.load(f)
-            # Punto de revisión [[6]]
-            debug_print(f"Configuración cargada: {config}")
-            return config
-    return DEFAULT_CONFIG
+            debug_print(f"Configuración single-PLC cargada: {config}")
+            return config, False  # False indica que es configuración single-PLC
+
+    return DEFAULT_CONFIG, False
 
 
-config = load_config()
-plc_mode = "Simulador" if config.get(
-    "simulator_enabled", False) else "PLC Real"
-# Punto de revisión [[6]]
-debug_print(
-    f"Iniciando en modo: {plc_mode}, IP: {config['ip']}, Puerto: {config['port']}")
+config, is_multi_plc = load_config()
 
-if config.get("simulator_enabled", False):
-    from models.plc_simulator import PLCSimulator as PLC
+if is_multi_plc:
+    debug_print(
+        f"Modo Multi-PLC: {len(config.get('plc_machines', []))} máquinas configuradas")
+    # Importar PLCManager para modo multi-PLC
+    from models.plc_manager import PLCManager
+    plc_manager = PLCManager(config['plc_machines'])
 else:
-    from models.plc import PLC
+    # Modo single-PLC (compatibilidad hacia atrás)
+    plc_mode = "Simulador" if config.get(
+        "simulator_enabled", False) else "PLC Real"
+    debug_print(
+        f"Modo Single-PLC: {plc_mode}, IP: {config['ip']}, Puerto: {config['port']}")
 
-plc = PLC(config["ip"], config["port"])
+    if config.get("simulator_enabled", False):
+        from models.plc_simulator import PLCSimulator as PLC
+    else:
+        from models.plc import PLC
+
+    # Crear PLCManager con una sola máquina para compatibilidad
+    from models.plc_manager import PLCManager
+    single_plc_config = [{
+        "id": "default_machine",
+        "name": "Máquina Principal",
+        "ip": config["ip"],
+        "port": config["port"],
+        "simulator": config.get("simulator_enabled", False),
+        "description": "Configuración de compatibilidad single-PLC"
+    }]
+    plc_manager = PLCManager(single_plc_config)
 
 
 def create_plc_instance(config):
-    """Crea instancia del PLC según modo [[6]]"""
-    if config.get("simulator_enabled", False):
-        from models.plc_simulator import PLCSimulator
-        return PLCSimulator(config["ip"], config["port"])
+    """Crea instancia del PLCManager según configuración"""
+    if 'plc_machines' in config:
+        # Configuración multi-PLC
+        from models.plc_manager import PLCManager
+        return PLCManager(config['plc_machines'])
     else:
-        return PLC(config["ip"], config["port"])
+        # Configuración single-PLC (compatibilidad)
+        from models.plc_manager import PLCManager
+        single_plc_config = [{
+            "id": "default_machine",
+            "name": "Máquina Principal",
+            "ip": config["ip"],
+            "port": config["port"],
+            "simulator": config.get("simulator_enabled", False),
+            "description": "Configuración de compatibilidad single-PLC"
+        }]
+        return PLCManager(single_plc_config)
 
 
 def monitor_plc_status(socketio, plc, interval=5.0):
@@ -188,49 +227,97 @@ def monitor_plc_status(socketio, plc, interval=5.0):
 
 
 def run_backend(config):
-    from models.plc import PLC
-    from models.plc_simulator import PLCSimulator
+    from models.plc_manager import PLCManager
     from api import create_app
     from flask_socketio import SocketIO
     import eventlet
     import copy
     import logging
 
-    def create_plc_instance(config):
-        if config.get("simulator_enabled"):
-            debug_print(
-                f"Iniciando en modo: Simulador, IP: {config['ip']}, Puerto: {config['port']}")
-            return PLCSimulator(config["ip"], config["port"])
-        else:
-            debug_print(
-                f"Iniciando en modo: PLC real, IP: {config['ip']}, Puerto: {config['port']}")
-            return PLC(config["ip"], config["port"])
+    # Determinar si es configuración multi-PLC o single-PLC
+    if 'plc_machines' in config:
+        # Configuración multi-PLC
+        plc_manager = PLCManager(config['plc_machines'])
+        debug_print(
+            f"Backend iniciado con {len(config['plc_machines'])} máquinas")
+    else:
+        # Configuración single-PLC (compatibilidad)
+        single_plc_config = [{
+            "id": "default_machine",
+            "name": "Máquina Principal",
+            "ip": config["ip"],
+            "port": config["port"],
+            "simulator": config.get("simulator_enabled", False),
+            "description": "Configuración de compatibilidad single-PLC"
+        }]
+        plc_manager = PLCManager(single_plc_config)
+        debug_print(f"Backend iniciado en modo compatibilidad single-PLC")
 
-    def monitor_plc_status(socketio, plc, interval=1.0):
-        last_status = None
+    app = create_app(plc_manager)
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+    def monitor_plc_status(socketio, plc_manager, interval=1.0):
+        """
+        Hilo que monitorea el estado de todas las máquinas y emite eventos WebSocket.
+        """
+        import time as _time
+        logger = logging.getLogger("monitor_plc_status")
+        last_status = {}
+
         while True:
             try:
-                status = plc.get_current_status()
-                if last_status is None or status != last_status:
-                    socketio.emit('plc_status', status)
-                    last_status = copy.deepcopy(status)
+                machines = plc_manager.get_available_machines()
+                for machine in machines:
+                    machine_id = machine['id']
+                    try:
+                        status = plc_manager.get_machine_status(
+                            machine_id, "monitor")
+
+                        if machine_id not in last_status or status != last_status[machine_id]:
+                            logger.info(
+                                f"[MONITOR] Emite evento 'plc_status' para máquina {machine_id}: {status}")
+                            socketio.emit(f'plc_status_{machine_id}', {
+                                'success': True,
+                                'data': status,
+                                'error': None,
+                                'code': None,
+                                'machine_id': machine_id
+                            })
+                            last_status[machine_id] = status
+
+                    except Exception as e:
+                        logger.error(
+                            f"[MONITOR] Error monitoreando máquina {machine_id}: {e}")
+                        socketio.emit(f'plc_status_error_{machine_id}', {
+                            'success': False,
+                            'data': None,
+                            'error': str(e),
+                            'code': PLC_CONN_ERROR,
+                            'machine_id': machine_id
+                        })
+
             except Exception as e:
-                socketio.emit('plc_status_error', {'error': str(e)})
-            eventlet.sleep(interval)
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)s %(name)s: %(message)s',
-        handlers=[
-            logging.FileHandler("carousel_api.log"),
-            logging.StreamHandler()
-        ]
-    )
-    plc = create_plc_instance(config)
-    flask_app = create_app(plc)
-    socketio = SocketIO(flask_app, cors_allowed_origins="*",
-                        async_mode="eventlet")
-    eventlet.spawn_n(monitor_plc_status, socketio, plc, 1.0)
-    socketio.run(flask_app, host="0.0.0.0", port=config.get("api_port", 5000))
+                logger.error(
+                    f"[MONITOR] Error general en monitor_plc_status: {e}")
+
+            _time.sleep(interval)
+
+    # Iniciar hilo de monitoreo
+    eventlet.spawn(monitor_plc_status, socketio, plc_manager)
+
+    # Configurar puerto de la API
+    api_port = config.get('api_config', {}).get(
+        'port', 5000) if 'api_config' in config else 5000
+
+    try:
+        socketio.run(app, host='0.0.0.0', port=api_port,
+                     debug=False, use_reloader=False)
+    except KeyboardInterrupt:
+        debug_print("Cerrando servidor backend...")
+        plc_manager.close_all_connections()
+    except Exception as e:
+        debug_print(f"Error en servidor backend: {e}")
+        plc_manager.close_all_connections()
 
 
 if __name__ == "__main__":
