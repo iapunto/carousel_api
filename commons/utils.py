@@ -33,8 +33,8 @@ ESTADOS_PLC = {
     "ALARMA": {
         "bit": 3,
         "descripcion": {
-            0: "Alarma activa",
-            1: "No hay alarma"
+            0: "No hay alarma",
+            1: "Alarma activa"
         }
     },
     "PARADA_EMERGENCIA": {
