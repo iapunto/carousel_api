@@ -520,8 +520,8 @@ tail -f logs/carousel_api.log
 
 Para soporte técnico contactar:
 
-- **Email**: <soporte@industriaspico.com>
-- **Teléfono**: +57 (1) 234-5678
+- **Email**: <soporte@iapunto.com>
+- **Teléfono**: +57 (316) 376 9935
 - **Documentación**: [Wiki interno]
 
 ---
