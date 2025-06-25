@@ -17,8 +17,10 @@
 
 - **API REST robusta** para integración con sistemas externos.
 - **Interfaz gráfica moderna** para operación manual y monitoreo en tiempo real.
+- **Aplicación web moderna** con diseño responsive y soporte multi-PLC.
+- **Sistema Multi-PLC** para gestión de múltiples máquinas desde una sola interfaz.
 - **Simulador de PLC** para pruebas sin hardware.
-- **Comunicación en tiempo real** mediante Socket.IO (sin polling agresivo).
+- **Comunicación en tiempo real** mediante WebSocket y Socket.IO.
 - **Seguridad reforzada** y buenas prácticas de desarrollo.
 
 ---
@@ -38,10 +40,15 @@
 ## 📦 Arquitectura
 
 ```md
-[GUI] <---Socket.IO---> [API Flask] <---TCP/IP---> [PLC Delta / Simulador]
+[GUI] <---WebSocket---> [API Flask] <---TCP/IP---> [PLC Delta / Simulador]
+[Web App] <---REST----> [Multi-PLC Manager] <---TCP/IP---> [Multiple PLCs]
 ```
 
+**Archivos principales:**
+
 - `api.py`: API principal y servidor de eventos.
+- `web_remote_control.py`: Aplicación web moderna con soporte multi-PLC.
+- `models/plc_manager.py`: Gestor de múltiples PLCs.
 - `models/plc.py`: Comunicación con PLC real.
 - `models/plc_simulator.py`: Simulador de PLC.
 - `controllers/carousel_controller.py`: Lógica de negocio y validaciones.
@@ -52,16 +59,38 @@
 
 ## 🔗 Endpoints principales
 
-| Método | Ruta           | Descripción                        | Parámetros         |
-|--------|----------------|------------------------------------|--------------------|
-| GET    | /v1/status     | Consulta el estado actual del PLC  | -                  |
-| POST   | /v1/command    | Envía un comando al PLC/simulador  | `command`, `argument` |
+### API Backend (Puerto 5000)
 
-**Ejemplo de uso:**
+| Método | Ruta                          | Descripción                        | Parámetros         |
+|--------|-------------------------------|------------------------------------|--------------------|
+| GET    | /v1/status                    | Consulta el estado actual del PLC  | -                  |
+| POST   | /v1/command                   | Envía un comando al PLC/simulador  | `command`, `argument` |
+| GET    | /v1/machines                  | Lista todas las máquinas configuradas | -               |
+| GET    | /v1/machines/{id}/status      | Consulta estado de máquina específica | -               |
+| POST   | /v1/machines/{id}/command     | Envía comando a máquina específica | `command`, `argument` |
+
+### Aplicación Web (Puerto 8181)
+
+| Ruta           | Descripción                                    |
+|----------------|------------------------------------------------|
+| /              | Interfaz web de control remoto                 |
+| /api/config    | Configuración de máquinas disponibles         |
+| /api/move      | Endpoint para envío de comandos desde la web  |
+
+**Ejemplos de uso:**
 
 ```bash
+# API Backend
 curl -X GET http://localhost:5000/v1/status
 curl -X POST http://localhost:5000/v1/command -H "Content-Type: application/json" -d '{"command":1,"argument":3}'
+
+# Multi-PLC
+curl -X GET http://localhost:5000/v1/machines
+curl -X POST http://localhost:5000/v1/machines/plc_001/command -H "Content-Type: application/json" -d '{"command":1,"argument":5}'
+
+# Aplicación Web
+curl -X GET http://localhost:8181/api/config
+curl -X POST http://localhost:8181/api/move -H "Content-Type: application/json" -d '{"machine_id":"plc_001","position":5}'
 ```
 
 ---
@@ -84,7 +113,17 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Configura `config.json` según tu entorno (ver ejemplo en el archivo).
+### Configuración
+
+1. **Configuración básica:** Edita `config.json` para configuración single-PLC
+2. **Configuración Multi-PLC:** Edita `config_multi_plc.json` para múltiples máquinas
+3. **Aplicación web:** Se inicia automáticamente en `http://localhost:8181`
+
+### Acceso a las interfaces
+
+- **GUI Principal:** Se abre automáticamente al ejecutar `main.py`
+- **Aplicación Web:** <http://localhost:8181>
+- **API Backend:** <http://localhost:5000>
 
 ---
 
