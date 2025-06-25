@@ -96,8 +96,9 @@ class MainWindow:
         # Crear pestañas
         self.create_tabs()
 
-        # Mostrar mensaje de espera
-        self.show_waiting_message()
+        # Mostrar información inicial y solicitar estado inmediatamente
+        self.show_initial_machine_info()
+        self.request_initial_status()
 
         # Configurar minimización al área de notificaciones
         self.tray_icon = None
@@ -793,6 +794,97 @@ class MainWindow:
             card_data["position_label"].configure(
                 text="---", text_color="gray")
 
+    def show_initial_machine_info(self):
+        """
+        Muestra información básica de las máquinas inmediatamente sin esperar WebSocket.
+        """
+        for machine_id, card_data in self.machine_cards.items():
+            machine_info = card_data["machine_info"]
+
+            # Mostrar estado inicial basado en el tipo de máquina
+            if machine_info.get("simulator", False):
+                card_data["status_indicator"].configure(
+                    text="Simulador", text_color="#00AAFF")
+                # Mostrar valores predeterminados para simulador
+                initial_states = {
+                    "READY": "OK",
+                    "RUN": "Detenido",
+                    "MODO_OPERACION": "Automático",
+                    "ALARMA": "Sin alarma"
+                }
+            else:
+                card_data["status_indicator"].configure(
+                    text="Conectando...", text_color="#FFA500")
+                # Mostrar estado de conexión para máquinas reales
+                initial_states = {
+                    "READY": "Verificando...",
+                    "RUN": "Verificando...",
+                    "MODO_OPERACION": "Verificando...",
+                    "ALARMA": "Verificando..."
+                }
+
+            # Actualizar labels con información inicial
+            for key, value in initial_states.items():
+                if key in card_data["status_labels"]:
+                    color = self.get_status_color(value)
+                    card_data["status_labels"][key].configure(
+                        text=value, text_color=color)
+
+            # Mostrar posición inicial
+            if machine_info.get("simulator", False):
+                card_data["position_label"].configure(
+                    text="1", text_color="#00AAFF")
+            else:
+                card_data["position_label"].configure(
+                    text="---", text_color="#FFA500")
+
+    def request_initial_status(self):
+        """
+        Solicita el estado inicial de las máquinas vía HTTP para carga más rápida.
+        """
+        def fetch_status():
+            try:
+                api_port = self._get_api_port()
+
+                # Solicitar estado via HTTP (más rápido que WebSocket)
+                if len(self.available_machines) > 1:  # Multi-PLC
+                    url = f"http://localhost:{api_port}/v1/multi-plc/status"
+                else:  # Single-PLC
+                    url = f"http://localhost:{api_port}/v1/status"
+
+                import requests
+                response = requests.get(url, timeout=3)
+
+                if response.status_code == 200:
+                    status_data = response.json()
+
+                    # Actualizar GUI en el hilo principal
+                    if len(self.available_machines) > 1:
+                        # Formato multi-PLC
+                        machines_status = status_data.get('machines', {})
+                        self.root.after(
+                            0, self.update_multi_plc_status, machines_status)
+                    else:
+                        # Formato single-PLC
+                        self.root.after(
+                            0, self.update_single_plc_status, status_data)
+
+                    debug_print("✅ Estado inicial cargado vía HTTP")
+                else:
+                    debug_print(
+                        f"⚠️ Error HTTP {response.status_code}: usando WebSocket como fallback")
+
+            except requests.exceptions.RequestException as e:
+                debug_print(
+                    f"⚠️ Error conexión HTTP: {e} - usando WebSocket como fallback")
+            except Exception as e:
+                debug_print(f"⚠️ Error obteniendo estado inicial: {e}")
+
+        # Ejecutar en hilo separado para no bloquear la GUI
+        import threading
+        status_thread = threading.Thread(target=fetch_status, daemon=True)
+        status_thread.start()
+
     def create_config_frame(self, parent):
         """Frame para configuración del sistema multi-PLC"""
         config_frame = ctk.CTkFrame(parent, corner_radius=10)
@@ -937,8 +1029,11 @@ class MainWindow:
             # 4. Actualizar el selector de máquinas en el panel de comandos
             self.update_machine_selector()
 
-            # 5. Mostrar mensaje de espera en las nuevas cards
-            self.show_waiting_message()
+            # 5. Mostrar información inicial en las nuevas cards
+            self.show_initial_machine_info()
+
+            # 6. Solicitar estado actualizado
+            self.request_initial_status()
 
             debug_print("✅ Dashboard actualizado correctamente")
 
@@ -1181,12 +1276,22 @@ class MainWindow:
 
     def get_status_color(self, value):
         """Obtiene el color apropiado para un valor de estado."""
-        if value in ["OK", "Remoto", "Desactivada", "El variador de velocidad está OK", "El equipo está listo para operar"]:
+        # Estados positivos (verde)
+        if value in ["OK", "Remoto", "Desactivada", "El variador de velocidad está OK", "El equipo está listo para operar", "Sin alarma", "Automático"]:
             return "#00FF00"  # Verde brillante
-        elif value in ["Fallo", "Activa", "Manual", "Error en el variador de velocidad", "Alarma activa", "El equipo no puede operar"]:
+
+        # Estados negativos (rojo)
+        elif value in ["Fallo", "Activa", "Manual", "Error en el variador de velocidad", "Alarma activa", "El equipo no puede operar", "Error"]:
             return "#FF3333"  # Rojo
-        elif value in ["Sin parada de emergencia", "No hay alarma", "No hay error de posicionamiento"]:
-            return "#FFD700"  # Amarillo
+
+        # Estados de advertencia/información (amarillo/naranja)
+        elif value in ["Sin parada de emergencia", "No hay alarma", "No hay error de posicionamiento", "Verificando...", "Conectando..."]:
+            return "#FFA500"  # Amarillo/Naranja
+
+        # Estados neutrales (azul)
+        elif value in ["Detenido", "Simulador"]:
+            return "#00AAFF"  # Azul
+
         else:
             return "#FFFFFF"  # Blanco por defecto
 

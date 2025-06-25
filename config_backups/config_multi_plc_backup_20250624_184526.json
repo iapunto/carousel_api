@@ -18,7 +18,7 @@
       "name": "Carrusel Secundario - Línea A",
       "ip": "192.168.1.51",
       "port": 3200,
-      "simulator": true,
+      "simulator": false,
       "description": "Carrusel secundario de la línea de producción A"
     },
     {
@@ -34,7 +34,7 @@
       "name": "Carrusel Línea C - Estación 7",
       "ip": "192.168.1.57",
       "port": 3200,
-      "simulator": true,
+      "simulator": false,
       "description": "Carrusel de la línea C, estación 7 - Ejemplo del usuario"
     },
     {
