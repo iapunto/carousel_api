@@ -2,6 +2,13 @@
 """
 Script para crear tags de versión automatizados en Git
 
+Proyecto: Sistema de Control de Carrusel Industrial
+Cliente: Industrias Pico S.A.S
+Desarrollo: IA Punto: Soluciones Tecnológicas
+
+Creado: 2025-06-24
+Última modificación: 2025-06-24
+
 Uso:
     python tools/create_version_tag.py
 

@@ -36,7 +36,7 @@ Aplicación de escritorio para control de carrusel industrial
 Desarrollado: IA Punto Soluciones Tecnológicas 
 Para: Industrias Pico S.A.S
 Fecha: 2024-09-27
-Actualizado: 2024-12-24
+Actualizado: 2025-06-24
 """
 
 # Importar información de versión

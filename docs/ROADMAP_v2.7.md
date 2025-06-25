@@ -1,5 +1,14 @@
 # Roadmap v2.7.x - Notificaciones Tempranas y Alertas Audibles
 
+**Proyecto:** Sistema de Control de Carrusel Industrial  
+**Cliente:** Industrias Pico S.A.S  
+**Desarrollo:** IA Punto: Soluciones Tecnológicas  
+
+**Creado:** 2025-06-24  
+**Última modificación:** 2025-06-24  
+
+---
+
 ## Objetivo General
 
 Implementar un sistema de notificaciones proactivas y alertas audibles para mejorar la experiencia del operador y la respuesta ante eventos críticos.

@@ -4,10 +4,14 @@ Información de versión para carousel_api
 Proyecto: Sistema de Control de Carrusel Industrial
 Cliente: Industrias Pico S.A.S
 Desarrollo: IA Punto: Soluciones Tecnológicas
+
+Creado: 2025-06-24
+Última modificación: 2025-06-24
 """
 
 __version__ = "2.6.0"
 __version_info__ = (2, 6, 0)
+__release_date__ = "2025-06-24"
 
 # Información adicional
 PROJECT_NAME = "carousel_api"

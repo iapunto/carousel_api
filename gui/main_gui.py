@@ -1,9 +1,15 @@
 """
 Interfaz gráfica principal para control de carrusel industrial
-Autor: IA Punto Soluciones Tecnológicas
-Fecha: 2024-09-27
+
+Proyecto: Sistema de Control de Carrusel Industrial
+Cliente: Industrias Pico S.A.S
+Desarrollo: IA Punto: Soluciones Tecnológicas
+
+Creado: 2024-09-27
+Última modificación: 2025-06-24
 
 Uso de CustomTkinter para mejorar el aspecto visual.
+Sistema Multi-PLC con Dashboard de Cards y Panel de Comandos optimizado.
 """
 
 import json as jsonlib

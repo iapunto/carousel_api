@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.0 - Sistema Multi-PLC con Dashboard de Cards y Optimizaciones (2024-12-24)
+## v2.6.0 - Sistema Multi-PLC con Dashboard de Cards y Optimizaciones (2025-06-24)
 
 ### 🚀 Funcionalidades Principales
 
