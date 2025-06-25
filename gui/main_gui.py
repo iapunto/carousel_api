@@ -288,7 +288,7 @@ class MainWindow:
         self.create_config_frame(tab_config)
 
     def create_command_frame(self, parent):
-        """Crea la pestaña para enviar comandos al PLC con interfaz mejorada."""
+        """Crea la pestaña para enviar comandos al PLC con interfaz mejorada en dos columnas."""
         # Frame principal
         main_frame = ctk.CTkFrame(parent, corner_radius=10)
         main_frame.pack(padx=20, pady=20, fill="both", expand=True)
@@ -301,13 +301,25 @@ class MainWindow:
         )
         title_label.pack(pady=(20, 30))
 
-        # Frame para controles
-        controls_frame = ctk.CTkFrame(main_frame, corner_radius=12)
-        controls_frame.pack(padx=40, pady=20, fill="x")
+        # Frame principal con dos columnas
+        columns_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        columns_frame.pack(padx=20, pady=10, fill="both", expand=True)
+
+        # ========== COLUMNA IZQUIERDA: CONTROLES ==========
+        controls_frame = ctk.CTkFrame(columns_frame, corner_radius=12)
+        controls_frame.pack(side="left", padx=(
+            0, 10), pady=0, fill="both", expand=True)
+
+        # Título de controles
+        ctk.CTkLabel(
+            controls_frame,
+            text="⚙️ Controles",
+            font=("Arial", 16, "bold")
+        ).pack(pady=(20, 15))
 
         # Selector de máquina
         machine_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
-        machine_frame.pack(pady=20, padx=30, fill="x")
+        machine_frame.pack(pady=15, padx=20, fill="x")
 
         ctk.CTkLabel(
             machine_frame,
@@ -322,7 +334,7 @@ class MainWindow:
             machine_frame,
             variable=self.selected_machine_var,
             values=self.get_machine_options(),
-            width=400,
+            width=300,
             height=35,
             font=("Arial", 12),
             dropdown_font=("Arial", 11)
@@ -331,7 +343,7 @@ class MainWindow:
 
         # Selector de cangilón
         cangilon_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
-        cangilon_frame.pack(pady=20, padx=30, fill="x")
+        cangilon_frame.pack(pady=15, padx=20, fill="x")
 
         ctk.CTkLabel(
             cangilon_frame,
@@ -359,7 +371,7 @@ class MainWindow:
         self.cangilon_entry = ctk.CTkEntry(
             spinbox_frame,
             textvariable=self.cangilon_var,
-            width=100,
+            width=80,
             height=35,
             font=("Arial", 14, "bold"),
             justify="center"
@@ -381,11 +393,11 @@ class MainWindow:
         # Label informativo
         info_label = ctk.CTkLabel(
             spinbox_frame,
-            text="(Rango: 1-255)",
+            text="(1-255)",
             font=("Arial", 10),
             text_color="#888888"
         )
-        info_label.pack(side="left", padx=20, pady=10)
+        info_label.pack(side="left", padx=15, pady=10)
 
         # Botón Mover
         move_button = ctk.CTkButton(
@@ -397,28 +409,29 @@ class MainWindow:
             fg_color="#2196F3",
             hover_color="#1976D2"
         )
-        move_button.pack(pady=30, padx=30, fill="x")
+        move_button.pack(pady=30, padx=20, fill="x")
 
-        # Zona de notificaciones
-        notification_frame = ctk.CTkFrame(main_frame, corner_radius=12)
-        notification_frame.pack(padx=40, pady=(
-            20, 40), fill="both", expand=True)
+        # ========== COLUMNA DERECHA: NOTIFICACIONES ==========
+        notification_frame = ctk.CTkFrame(columns_frame, corner_radius=12)
+        notification_frame.pack(side="right", padx=(
+            10, 0), pady=0, fill="both", expand=True)
 
+        # Título de notificaciones
         ctk.CTkLabel(
             notification_frame,
-            text="📢 Resultado de la Operación:",
-            font=("Arial", 14, "bold")
-        ).pack(anchor="w", padx=20, pady=(15, 5))
+            text="📢 Resultado de la Operación",
+            font=("Arial", 16, "bold")
+        ).pack(pady=(20, 15))
 
         # Área de texto para notificaciones
         self.notification_text = ctk.CTkTextbox(
             notification_frame,
-            height=150,
+            height=200,
             font=("Arial", 11),
             wrap="word"
         )
         self.notification_text.pack(
-            padx=20, pady=(5, 20), fill="both", expand=True)
+            padx=20, pady=(0, 20), fill="both", expand=True)
 
         # Mensaje inicial
         self.add_notification(
@@ -554,9 +567,8 @@ class MainWindow:
 
             # Construir payload para comando
             if len(self.available_machines) > 1:  # Multi-PLC
-                url = f"http://localhost:{api_port}/v1/multi-plc/command"
+                url = f"http://localhost:{api_port}/v1/machines/{machine_id}/command"
                 payload = {
-                    "machine_id": machine_id,
                     "command": 1,  # Comando de movimiento
                     "argument": cangilon_position
                 }
@@ -845,34 +857,50 @@ class MainWindow:
         def fetch_status():
             try:
                 api_port = self._get_api_port()
+                import requests
 
                 # Solicitar estado via HTTP (más rápido que WebSocket)
                 if len(self.available_machines) > 1:  # Multi-PLC
-                    url = f"http://localhost:{api_port}/v1/multi-plc/status"
+                    # Solicitar estado de cada máquina individualmente
+                    machines_status = {}
+                    for machine in self.available_machines:
+                        machine_id = machine["id"]
+                        try:
+                            url = f"http://localhost:{api_port}/v1/machines/{machine_id}/status"
+                            response = requests.get(url, timeout=2)
+                            if response.status_code == 200:
+                                machine_data = response.json()
+                                if machine_data.get('success'):
+                                    machines_status[machine_id] = machine_data['data']
+                                else:
+                                    machines_status[machine_id] = {
+                                        'error': machine_data.get('error', 'Error desconocido')}
+                            else:
+                                machines_status[machine_id] = {
+                                    'error': f'HTTP {response.status_code}'}
+                        except Exception as e:
+                            machines_status[machine_id] = {'error': str(e)}
+
+                    # Actualizar GUI con datos multi-PLC
+                    self.root.after(
+                        0, self.update_multi_plc_status, machines_status)
+                    debug_print(
+                        f"✅ Estado inicial cargado vía HTTP: {len(machines_status)} máquinas")
+
                 else:  # Single-PLC
                     url = f"http://localhost:{api_port}/v1/status"
+                    response = requests.get(url, timeout=3)
 
-                import requests
-                response = requests.get(url, timeout=3)
-
-                if response.status_code == 200:
-                    status_data = response.json()
-
-                    # Actualizar GUI en el hilo principal
-                    if len(self.available_machines) > 1:
-                        # Formato multi-PLC
-                        machines_status = status_data.get('machines', {})
-                        self.root.after(
-                            0, self.update_multi_plc_status, machines_status)
-                    else:
+                    if response.status_code == 200:
+                        status_data = response.json()
                         # Formato single-PLC
-                        self.root.after(
-                            0, self.update_single_plc_status, status_data)
-
-                    debug_print("✅ Estado inicial cargado vía HTTP")
-                else:
-                    debug_print(
-                        f"⚠️ Error HTTP {response.status_code}: usando WebSocket como fallback")
+                        if status_data.get('success'):
+                            self.root.after(
+                                0, self.update_single_plc_status, status_data.get('data', {}))
+                        debug_print("✅ Estado inicial cargado vía HTTP")
+                    else:
+                        debug_print(
+                            f"⚠️ Error HTTP {response.status_code}: usando WebSocket como fallback")
 
             except requests.exceptions.RequestException as e:
                 debug_print(
