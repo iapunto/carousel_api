@@ -1,0 +1,55 @@
+{
+  "api_config": {
+    "port": 5000,
+    "debug": false,
+    "allowed_origins": "http://localhost,http://127.0.0.1,http://192.168.1.0/24,http://localhost:3000"
+  },
+  "plc_machines": [
+    {
+      "id": "machine_1",
+      "name": "Carrusel Principal - Línea A",
+      "ip": "192.168.1.50",
+      "port": 3200,
+      "simulator": false,
+      "description": "Carrusel principal de la línea de producción A"
+    },
+    {
+      "id": "machine_2",
+      "name": "Carrusel Secundario - Línea A",
+      "ip": "192.168.1.51",
+      "port": 3200,
+      "simulator": true,
+      "description": "Carrusel secundario de la línea de producción A"
+    },
+    {
+      "id": "machine_3",
+      "name": "Carrusel Principal - Línea B",
+      "ip": "192.168.1.52",
+      "port": 3200,
+      "simulator": false,
+      "description": "Carrusel principal de la línea de producción B"
+    },
+    {
+      "id": "machine_7",
+      "name": "Carrusel Línea C - Estación 7",
+      "ip": "192.168.1.57",
+      "port": 3200,
+      "simulator": true,
+      "description": "Carrusel de la línea C, estación 7 - Ejemplo del usuario"
+    },
+    {
+      "id": "simulator_test",
+      "name": "Simulador de Pruebas",
+      "ip": "127.0.0.1",
+      "port": 3200,
+      "simulator": true,
+      "description": "Simulador para pruebas y desarrollo"
+    }
+  ],
+  "logging": {
+    "level": "INFO",
+    "max_file_size_mb": 10,
+    "backup_count": 5,
+    "connection_log_enabled": true
+  }
+}
