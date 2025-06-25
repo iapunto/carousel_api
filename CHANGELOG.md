@@ -1,5 +1,70 @@
 # Changelog
 
+## v2.6.0 - Sistema Multi-PLC con Dashboard de Cards y Optimizaciones (2024-12-24)
+
+### 🚀 Funcionalidades Principales
+
+- **Sistema Multi-PLC Completo**: Soporte para múltiples carruseles industriales con configuración centralizada
+- **Dashboard de Cards Dinámicas**: Sistema de cards que se crean automáticamente por cada máquina configurada
+- **Panel de Comandos Mejorado**: Interfaz intuitiva con selector de máquinas y spinbox para cangilones
+- **Actualización Automática**: Dashboard se actualiza sin reiniciar al cambiar configuración Real/Simulador
+
+### 🎨 Interfaz y UX
+
+- **Layout de Dos Columnas**: Panel de comandos reorganizado para mejor aprovechamiento del espacio
+- **Cards Escalables**: Vista scrollable para manejar múltiples máquinas con información completa por card
+- **Indicadores Visuales**: Estados con colores semánticos (Verde/Rojo/Amarillo/Azul) y emojis descriptivos
+- **Carga Inicial Optimizada**: Información básica mostrada inmediatamente, estado completo en ~3 segundos
+
+### 🔧 Mejoras Técnicas
+
+- **WebSocket Nativo**: Migración de SocketIO a WebSocket nativo (puerto 8765) para mejor rendimiento
+- **Solicitudes HTTP Paralelas**: Carga inicial vía HTTP más rápida que WebSocket como fallback
+- **Watcher de Archivos**: Detección automática de cambios en configuración cada 3 segundos
+- **Endpoints Corregidos**: URLs de API corregidas para comandos multi-PLC
+
+### 🏭 Configuración Multi-Máquina
+
+- **Configuración Centralizada**: Gestión completa desde GUI con sistema CRUD
+- **Compatibilidad Dual**: Detecta automáticamente single-PLC vs multi-PLC
+- **Backups Automáticos**: Respaldo de configuraciones con timestamps
+- **Validación Robusta**: Verificación de IPs, puertos y tipos de máquina
+
+### 📊 Dashboard y Monitoreo
+
+- **Tiempo Real**: Actualización vía WebSocket cada 2 segundos con reconexión automática
+- **Información Completa**: Header con nombre, IP:Puerto, tipo (Real/Simulador) por card
+- **Grid de Estados**: Display 2x2 de estados principales (READY, RUN, MODO_OPERACION, ALARMA)
+- **Posición Destacada**: Display de posición actual en azul prominente
+
+### 🎯 Panel de Comandos
+
+- **Selector Dinámico**: ComboBox con todas las máquinas configuradas automáticamente
+- **Spinbox Intuitivo**: Flechas ▲▼ para incrementar/decrementar posición de cangilón (1-255)
+- **Notificaciones en Tiempo Real**: TextBox con timestamps, emojis categorizados y throttling
+- **Validaciones**: Selección obligatoria de máquina, rango de cangilón, manejo de errores
+
+### 🔄 Actualizaciones Automáticas
+
+- **Detección de Cambios**: Monitoreo de `config_multi_plc.json` sin reiniciar aplicación
+- **Recarga Inteligente**: Actualización completa del dashboard y panel de comandos
+- **Compatibilidad Legacy**: Mantiene soporte para configuración single-PLC existente
+
+### 🛠️ Correcciones Importantes
+
+- **Endpoints API**: Corregido `/v1/multi-plc/command` → `/v1/machines/{id}/command`
+- **Manejo de Errores**: Mejor gestión de errores de simuladores y máquinas reales
+- **Layout Responsivo**: Panel funcional sin necesidad de maximizar ventana
+- **Encoding UTF-8**: Corrección de problemas de emojis en Windows
+
+### 📋 Próximas Funcionalidades Planificadas
+
+- **Notificaciones Tempranas**: Sistema de alertas proactivas
+- **Emisión de Sonidos**: Alertas audibles para alarmas y fallos
+- **Métricas Avanzadas**: Dashboard de rendimiento y estadísticas
+
+---
+
 ## v2.5.38
 
 - Separación profesional de entornos: ahora los prints de depuración solo aparecen en desarrollo (`APP_ENV=development`).

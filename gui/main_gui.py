@@ -65,7 +65,15 @@ class MainWindow:
         self.root = root
         self.plc = plc
         self.config = config
-        self.root.title("Vertical PIC - Control de Carrusel")
+
+        # Importar versión
+        try:
+            from __version__ import __version__
+            version_str = f" v{__version__}"
+        except ImportError:
+            version_str = ""
+
+        self.root.title(f"Vertical PIC - Control de Carrusel{version_str}")
         # Configurar el ícono
         icon_path = resource_path("assets/favicon.ico")
         if os.path.exists(icon_path):

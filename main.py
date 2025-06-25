@@ -1,3 +1,4 @@
+from __version__ import __version__, PROJECT_DESCRIPTION
 import tkinter as tk
 from tkinter import ttk, messagebox
 import json
@@ -35,8 +36,10 @@ Aplicación de escritorio para control de carrusel industrial
 Desarrollado: IA Punto Soluciones Tecnológicas 
 Para: Industrias Pico S.A.S
 Fecha: 2024-09-27
-Actualizado: 2025-06-14
+Actualizado: 2024-12-24
 """
+
+# Importar información de versión
 
 # Configuración persistente [[1]]
 CONFIG_FILE = "config.json"
