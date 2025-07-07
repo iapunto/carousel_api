@@ -159,7 +159,8 @@ def create_app(plc):
                     # Si la respuesta es inválida, agrega mensaje
                     if response.get('status_code', -1) == 0 and response.get('position', -1) == 0:
                         return jsonify({**response, 'status_message': 'Advertencia: El PLC respondió con valores nulos o inválidos. Verifique la operación física.'}), 200
-                    return jsonify(response), 200
+                    # Si todo fue bien, mensaje de éxito
+                    return jsonify({**response, 'status_message': 'Comando enviado exitosamente al PLC.'}), 200
                 except Exception as e:
                     logger.error(f"Error en /v1/command: {str(e)}")
                     return jsonify({'error': f'Error: {str(e)}', 'status_message': f'Error al procesar el comando: {str(e)}'}), 500
