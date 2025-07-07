@@ -140,15 +140,15 @@ def create_app(plc):
             description: Error interno.
         """
         if not request.is_json:
-            return jsonify({'error': 'Solicitud debe ser JSON'}), 400
+            return jsonify({'error': 'Solicitud debe ser JSON', 'status_message': 'El cuerpo de la solicitud debe ser JSON.'}), 400
         data = request.get_json()
         command = data.get('command')
         argument = data.get('argument')
         if command is None:
-            return jsonify({'error': 'Falta el parámetro command'}), 400
+            return jsonify({'error': 'Falta el parámetro command', 'status_message': 'El parámetro "command" es obligatorio.'}), 400
         acquired = plc_access_lock.acquire(timeout=2)
         if not acquired:
-            return jsonify({'error': 'PLC ocupado, intente de nuevo en unos segundos'}), 409
+            return jsonify({'error': 'PLC ocupado, intente de nuevo en unos segundos', 'status_message': 'El PLC está ocupado, por favor intente nuevamente.'}), 409
         try:
             if plc.connect():
                 try:
@@ -156,12 +156,15 @@ def create_app(plc):
                     time.sleep(0.5)
                     response = plc.receive_response()
                     plc.close()
+                    # Si la respuesta es inválida, agrega mensaje
+                    if response.get('status_code', -1) == 0 and response.get('position', -1) == 0:
+                        return jsonify({**response, 'status_message': 'Advertencia: El PLC respondió con valores nulos o inválidos. Verifique la operación física.'}), 200
                     return jsonify(response), 200
                 except Exception as e:
                     logger.error(f"Error en /v1/command: {str(e)}")
-                    return jsonify({'error': f'Error: {str(e)}'}), 500
+                    return jsonify({'error': f'Error: {str(e)}', 'status_message': f'Error al procesar el comando: {str(e)}'}), 500
             else:
-                return jsonify({'error': 'No se pudo conectar al PLC'}), 500
+                return jsonify({'error': 'No se pudo conectar al PLC', 'status_message': 'No se pudo establecer conexión con el PLC. Verifique el cableado, la IP y el estado del equipo.'}), 500
         finally:
             plc_access_lock.release()
 
