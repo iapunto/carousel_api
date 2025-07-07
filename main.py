@@ -72,10 +72,10 @@ def create_plc_instance(config):
         return PLC(config["ip"], config["port"])
 
 
-def monitor_plc_status(socketio, plc, interval=5.0):
+def monitor_plc_status(socketio, plc, interval=60.0):
     """
     Hilo que monitorea el estado del PLC y emite eventos WebSocket solo si hay cambios.
-    Ahora cierra la conexión tras cada consulta y el intervalo es de 5 segundos.
+    Ahora cierra la conexión tras cada consulta y el intervalo es de 60 segundos.
     Se mantienen logs detallados para diagnóstico.
     """
     import time as _time
@@ -136,7 +136,7 @@ def run_backend(config):
                 f"Iniciando en modo: PLC real, IP: {config['ip']}, Puerto: {config['port']}")
             return PLC(config["ip"], config["port"])
 
-    def monitor_plc_status(socketio, plc, interval=1.0):
+    def monitor_plc_status(socketio, plc, interval=60.0):
         import time as _time
         from plc_cache import plc_status_cache
         last_status = None
@@ -148,6 +148,7 @@ def run_backend(config):
                     last_status = copy.deepcopy(status)
                 plc_status_cache['status'] = status
                 plc_status_cache['timestamp'] = _time.time()
+                plc.close()  # Cierra la conexión tras cada consulta
             except Exception as e:
                 socketio.emit('plc_status_error', {'error': str(e)})
             eventlet.sleep(interval)
@@ -163,7 +164,7 @@ def run_backend(config):
     flask_app = create_app(plc)
     socketio = SocketIO(flask_app, cors_allowed_origins="*",
                         async_mode="eventlet")
-    eventlet.spawn_n(monitor_plc_status, socketio, plc, 1.0)
+    eventlet.spawn_n(monitor_plc_status, socketio, plc, 60.0)
     socketio.run(flask_app, host="0.0.0.0", port=config.get("api_port", 5000))
 
 
