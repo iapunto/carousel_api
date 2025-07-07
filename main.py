@@ -84,6 +84,16 @@ def monitor_plc_status(socketio, plc, interval=60.0):
     last_status = None
     consecutive_errors = 0
     max_errors = 3
+    # Consulta y emite el estado inmediatamente al iniciar
+    try:
+        status = plc.get_current_status()
+        socketio.emit('plc_status', status)
+        plc_status_cache['status'] = status
+        plc_status_cache['timestamp'] = _time.time()
+        plc.close()
+        last_status = status.copy()
+    except Exception as e:
+        socketio.emit('plc_status_error', {'error': str(e)})
     while True:
         try:
             logger.info("Consultando estado del PLC...")
@@ -140,18 +150,40 @@ def run_backend(config):
         import time as _time
         from plc_cache import plc_status_cache
         last_status = None
+        # Consulta y emite el estado inmediatamente al iniciar
+        try:
+            status = plc.get_current_status()
+            socketio.emit('plc_status', status)
+            plc_status_cache['status'] = status
+            plc_status_cache['timestamp'] = _time.time()
+            plc.close()
+            last_status = status.copy()
+        except Exception as e:
+            socketio.emit('plc_status_error', {'error': str(e)})
+        # Luego sigue el ciclo normal
         while True:
             try:
                 status = plc.get_current_status()
                 if last_status is None or status != last_status:
                     socketio.emit('plc_status', status)
-                    last_status = copy.deepcopy(status)
+                    last_status = status.copy()
                 plc_status_cache['status'] = status
                 plc_status_cache['timestamp'] = _time.time()
-                plc.close()  # Cierra la conexión tras cada consulta
+                plc.close()
             except Exception as e:
                 socketio.emit('plc_status_error', {'error': str(e)})
             eventlet.sleep(interval)
+
+    # Al recibir una nueva conexión WebSocket, envía el último estado almacenado
+    def send_initial_status_on_connect():
+        from plc_cache import plc_status_cache
+        status = plc_status_cache.get('status')
+        if status is not None:
+            socketio.emit('plc_status', status)
+
+    # Registro del handler para nuevas conexiones
+    socketio.on_event('connect', lambda: send_initial_status_on_connect())
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s %(levelname)s %(name)s: %(message)s',
