@@ -65,7 +65,7 @@ def create_app(plc):
     @app.route('/v1/status', methods=['GET'])
     def get_status():
         """
-        Obtiene el estado y posición del PLC, decodificando el status_code para mostrar los estados legibles. Consulta DIRECTA al PLC (no usa cache).
+        Obtiene el estado y posición del PLC, decodificando el status_code para mostrar los estados legibles. Usa el cache actualizado por el hilo de monitoreo.
         ---
         tags:
           - Estado del PLC
@@ -88,28 +88,25 @@ def create_app(plc):
           500:
             description: Error de comunicación.
         """
-        try:
-            status = plc.get_current_status()
-            if status is not None and 'status_code' in status and 'position' in status:
-                status_code = status['status_code']
-                position = status['position']
-                estados = interpretar_estado_plc(status_code)
-                response = {
-                    'success': True,
-                    'data': {
-                        'status': estados,
-                        'position': position,
-                        'raw_status': status_code,
-                        'timestamp': int(time.time())
-                    },
-                    'error': None,
-                    'code': None
-                }
-                return jsonify(response), 200
-            else:
-                return jsonify({'success': False, 'data': None, 'error': 'Estado no disponible', 'code': 'NO_STATUS'}), 503
-        except Exception as e:
-            return jsonify({'success': False, 'data': None, 'error': str(e), 'code': 'PLC_ERROR'}), 500
+        status = plc_status_cache.get('status')
+        if status is not None and 'status_code' in status and 'position' in status:
+            status_code = status['status_code']
+            position = status['position']
+            estados = interpretar_estado_plc(status_code)
+            response = {
+                'success': True,
+                'data': {
+                    'status': estados,
+                    'position': position,
+                    'raw_status': status_code,
+                    'timestamp': int(time.time())
+                },
+                'error': None,
+                'code': None
+            }
+            return jsonify(response), 200
+        else:
+            return jsonify({'success': False, 'data': None, 'error': 'Estado no disponible', 'code': 'NO_STATUS'}), 503
 
     @app.route('/v1/command', methods=['POST'])
     def send_command():
