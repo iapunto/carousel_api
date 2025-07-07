@@ -93,12 +93,15 @@ def create_app(plc):
             status_code = status['status_code']
             position = status['position']
             estados = interpretar_estado_plc(status_code)
+            raw_status_bin = format(status_code, '08b')[
+                ::-1]  # binario, derecha a izquierda
             response = {
                 'success': True,
                 'data': {
                     'status': estados,
                     'position': position,
                     'raw_status': status_code,
+                    'raw_status_bin': raw_status_bin,
                     'timestamp': int(time.time())
                 },
                 'error': None,
