@@ -181,21 +181,11 @@ def run_backend(config):
         if status is not None:
             socketio.emit('plc_status', status)
 
-    # Registro del handler para nuevas conexiones
-    socketio.on_event('connect', lambda: send_initial_status_on_connect())
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)s %(name)s: %(message)s',
-        handlers=[
-            logging.FileHandler("carousel_api.log"),
-            logging.StreamHandler()
-        ]
-    )
-    plc = create_plc_instance(config)
     flask_app = create_app(plc)
     socketio = SocketIO(flask_app, cors_allowed_origins="*",
                         async_mode="eventlet")
+    # Registro del handler para nuevas conexiones (debe ir después de crear socketio)
+    socketio.on_event('connect', lambda: send_initial_status_on_connect())
     eventlet.spawn_n(monitor_plc_status, socketio, plc, 60.0)
     socketio.run(flask_app, host="0.0.0.0", port=config.get("api_port", 5000))
 
