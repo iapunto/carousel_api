@@ -152,15 +152,18 @@ def create_app(plc):
         try:
             if plc.connect():
                 try:
+                    # Consultar posición inicial antes de enviar el comando
+                    initial_status = plc.get_current_status()
+                    initial_position = initial_status.get('position', None)
                     plc.send_command(command, argument)
                     time.sleep(0.5)
                     response = plc.receive_response()
                     plc.close()
                     # Si la respuesta es inválida, agrega mensaje
                     if response.get('status_code', -1) == 0 and response.get('position', -1) == 0:
-                        return jsonify({**response, 'status_message': 'Advertencia: El PLC respondió con valores nulos o inválidos. Verifique la operación física.'}), 200
-                    # Si todo fue bien, mensaje de éxito
-                    return jsonify({**response, 'status_message': 'Comando enviado exitosamente al PLC.'}), 200
+                        return jsonify({**response, 'initial_position': initial_position, 'target_position': argument, 'status_message': 'Advertencia: El PLC respondió con valores nulos o inválidos. Verifique la operación física.'}), 200
+                    # Si todo fue bien, mensaje de éxito y posiciones
+                    return jsonify({**response, 'initial_position': initial_position, 'target_position': argument, 'status_message': 'Comando enviado exitosamente al PLC.'}), 200
                 except Exception as e:
                     logger.error(f"Error en /v1/command: {str(e)}")
                     return jsonify({'error': f'Error: {str(e)}', 'status_message': f'Error al procesar el comando: {str(e)}'}), 500
