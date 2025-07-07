@@ -151,11 +151,18 @@ class PLC:
             Si ocurre un error, retorna {'error': <mensaje>}.
         """
         try:
+            reconectado = False
             if not self.sock:
                 self.connect()
+                reconectado = True
             self.send_command(0)  # Comando STATUS
-            time.sleep(0.2)  # Pequeña espera para respuesta
+            if reconectado:
+                time.sleep(0.3)  # Espera tras reconexión
             response = self.receive_response()
+            # Si la respuesta es inválida tras reconexión, reintenta una vez
+            if reconectado and response.get('status_code', -1) == 0 and response.get('position', -1) == 0:
+                time.sleep(0.3)
+                response = self.receive_response()
             return response
         except Exception as e:
             self.logger.error(f"Error en get_current_status: {str(e)}")
