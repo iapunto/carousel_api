@@ -137,6 +137,8 @@ def run_backend(config):
             return PLC(config["ip"], config["port"])
 
     def monitor_plc_status(socketio, plc, interval=1.0):
+        import time as _time
+        from plc_cache import plc_status_cache
         last_status = None
         while True:
             try:
@@ -144,6 +146,8 @@ def run_backend(config):
                 if last_status is None or status != last_status:
                     socketio.emit('plc_status', status)
                     last_status = copy.deepcopy(status)
+                plc_status_cache['status'] = status
+                plc_status_cache['timestamp'] = _time.time()
             except Exception as e:
                 socketio.emit('plc_status_error', {'error': str(e)})
             eventlet.sleep(interval)
