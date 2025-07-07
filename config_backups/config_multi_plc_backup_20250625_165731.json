@@ -14,6 +14,14 @@
       "description": "Carrusel principal de la línea de producción A"
     },
     {
+      "id": "machine_2",
+      "name": "Carrusel Secundario - Línea A",
+      "ip": "192.168.1.51",
+      "port": 3200,
+      "simulator": true,
+      "description": "Carrusel secundario de la línea de producción A"
+    },
+    {
       "id": "machine_3",
       "name": "Carrusel Principal - Línea B",
       "ip": "192.168.1.52",
