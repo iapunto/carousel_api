@@ -18,6 +18,7 @@ from controllers.carousel_controller import CarouselController
 import time
 import logging
 from plc_cache import plc_status_cache, plc_access_lock
+from commons.utils import interpretar_estado_plc
 
 
 def create_app(plc):
@@ -64,7 +65,7 @@ def create_app(plc):
     @app.route('/v1/status', methods=['GET'])
     def get_status():
         """
-        Obtiene el estado y posición del PLC.
+        Obtiene el estado y posición del PLC, decodificando el status_code para mostrar los estados legibles.
         ---
         tags:
           - Estado del PLC
@@ -76,20 +77,36 @@ def create_app(plc):
                 schema:
                   type: object
                   properties:
-                    status_code:
-                      type: integer
-                      description: Código de estado (8 bits).
-                    position:
-                      type: integer
-                      description: Posición del carrusel (0-9).
+                    success:
+                      type: boolean
+                    data:
+                      type: object
+                    error:
+                      type: string
+                    code:
+                      type: string
           500:
             description: Error de comunicación.
         """
         status = plc_status_cache.get('status')
-        if status is not None:
-            return jsonify(status), 200
+        if status is not None and 'status_code' in status and 'position' in status:
+            status_code = status['status_code']
+            position = status['position']
+            estados = interpretar_estado_plc(status_code)
+            response = {
+                'success': True,
+                'data': {
+                    'status': estados,
+                    'position': position,
+                    'raw_status': status_code,
+                    'timestamp': int(time.time())
+                },
+                'error': None,
+                'code': None
+            }
+            return jsonify(response), 200
         else:
-            return jsonify({'error': 'Estado no disponible'}), 503
+            return jsonify({'success': False, 'data': None, 'error': 'Estado no disponible', 'code': 'NO_STATUS'}), 503
 
     @app.route('/v1/command', methods=['POST'])
     def send_command():
