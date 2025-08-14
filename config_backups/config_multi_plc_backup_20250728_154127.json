@@ -12,6 +12,14 @@
       "port": 3200,
       "simulator": false,
       "description": "Carrusel principal de la línea de producción A"
+    },
+    {
+      "id": "simulator_test",
+      "name": "Simulador de Pruebas",
+      "ip": "127.0.0.1",
+      "port": 3200,
+      "simulator": true,
+      "description": "Simulador para pruebas y desarrollo"
     }
   ],
   "logging": {

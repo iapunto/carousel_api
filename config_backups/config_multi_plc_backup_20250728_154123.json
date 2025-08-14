@@ -12,6 +12,22 @@
       "port": 3200,
       "simulator": false,
       "description": "Carrusel principal de la línea de producción A"
+    },
+    {
+      "id": "machine_7",
+      "name": "Carrusel Línea C - Estación 7",
+      "ip": "192.168.1.57",
+      "port": 3200,
+      "simulator": true,
+      "description": "Carrusel de la línea C, estación 7 - Ejemplo del usuario"
+    },
+    {
+      "id": "simulator_test",
+      "name": "Simulador de Pruebas",
+      "ip": "127.0.0.1",
+      "port": 3200,
+      "simulator": true,
+      "description": "Simulador para pruebas y desarrollo"
     }
   ],
   "logging": {
