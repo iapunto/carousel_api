@@ -17,6 +17,7 @@ import pystray  # Para manejar el área de notificaciones
 from commons.utils import interpretar_estado_plc
 import socketio
 import json as jsonlib
+import requests
 
 CONFIG_FILE = "config.json"
 DEFAULT_CONFIG = {
@@ -176,45 +177,38 @@ class MainWindow:
                     text="Desconectado", text_color="red")
 
     def send_test_command(self):
-        """Envía un comando al PLC para pruebas"""
+        """
+        Envía un comando al PLC a través de la API REST del backend.
+        """
         try:
-            # Verificar si el PLC está inicializado
-            if self.plc is None:
-                messagebox.showerror(
-                    "Error", "El PLC no está inicializado. Por favor, configure la conexión antes de enviar comandos.")
-                return
-
-            # Obtener valores del formulario
             command = int(self.command_var.get())
             argument = int(self.argument_var.get())
 
-            # Validar los valores
             if not (0 <= command <= 255):
-                messagebox.showerror(
-                    "Error", "El comando debe estar entre 0 y 255.")
+                messagebox.showerror("Error", "El comando debe estar entre 0 y 255.")
                 return
 
             if not (0 <= argument <= 255):
-                messagebox.showerror(
-                    "Error", "El argumento debe estar entre 0 y 255.")
+                messagebox.showerror("Error", "El argumento debe estar entre 0 y 255.")
                 return
 
-            # Conectar al PLC y enviar el comando
-            if self.plc.connect():
-                try:
-                    self.plc.send_command(command, argument)
-                    messagebox.showinfo(
-                        "Éxito", f"Comando {command} enviado con argumento {argument}.")
-                except Exception as e:
-                    messagebox.showerror(
-                        "Error", f"No se pudo enviar el comando: {str(e)}")
-                finally:
-                    self.plc.close()
+            # Usa el puerto configurado para la API, por defecto 5001
+            api_port = self.config.get('api_port', 5001)
+            url = f"http://localhost:{api_port}/v1/command"
+            payload = {"command": command, "argument": argument}
+            response = requests.post(url, json=payload, timeout=5)
+            if response.ok:
+                data = response.json()
+                if data.get("error"):
+                    messagebox.showerror("Error", data["error"])
+                else:
+                    messagebox.showinfo("Éxito", f"Comando {command} enviado con argumento {argument}.")
             else:
-                messagebox.showerror("Error", "No se pudo conectar al PLC.")
+                messagebox.showerror("Error", f"Error HTTP: {response.status_code}")
         except ValueError:
-            messagebox.showerror(
-                "Error", "Los valores deben ser números enteros.")
+            messagebox.showerror("Error", "Los valores deben ser números enteros.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al enviar comando: {str(e)}")
 
     def create_exit_button(self):
         """Crea un botón de salida en la interfaz"""
