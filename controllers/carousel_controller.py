@@ -45,7 +45,7 @@ class CarouselController:
         """
         self.plc = plc
         self.logger = logging.getLogger(__name__)
-        self.response_delay = 0.2  # Tiempo de espera para la respuesta del PLC en segundos
+        self.response_delay = 3.0  # Tiempo de espera para la respuesta del PLC en segundos
 
     def send_command(self, command: int, argument: int = None, remote_addr=None) -> dict:
         """
@@ -63,23 +63,34 @@ class CarouselController:
             ValueError: Parámetros inválidos
             RuntimeError: Error de comunicación
         """
-        estado_antes = None
-        try:
-            if hasattr(self.plc, 'get_current_status'):
-                estado_antes = self.plc.get_current_status()
-        except Exception:
-            estado_antes = None
         validar_comando(command)
         if argument is not None:
             validar_argumento(argument)
         try:
             with self.plc:  # Gestión automática de conexión [[2]]
+                # Comando 1 (mover) es 1-indexado en la API, 0-indexado en el PLC
+                plc_argument = argument - 1 if command == 1 and argument is not None else argument
                 self.logger.info(
-                    f"[PLC] Enviando comando: {command}, argumento: {argument}")
-                self.plc.send_command(command, argument)
+                    f"[PLC] Enviando comando: {command}, argumento: {argument} (PLC: {plc_argument})")
+                self.plc.send_command(command, plc_argument)
                 # Pausa para dar tiempo al PLC a procesar el comando antes de responder
                 time.sleep(self.response_delay)
                 response = self.plc.receive_response()
+                # Si es comando de movimiento, el PLC responde con un ACK (21)
+                # Necesitamos esperar a que termine el movimiento y consultar el estado real
+                if command == 1:
+                    self.logger.info("[PLC] Comando de movimiento: esperando a que termine...")
+                    time.sleep(5)  # Dar tiempo al movimiento físico
+                    # Consultar estado real después del movimiento
+                    try:
+                        self.plc.send_command(0)  # Comando STATUS
+                        time.sleep(1)
+                        final_response = self.plc.receive_response()
+                        self.logger.info(
+                            f"[PLC] Estado final después de movimiento: {final_response}")
+                        response = final_response
+                    except Exception as e:
+                        self.logger.warning(f"[PLC] No se pudo consultar estado final: {e}")
             # Log de bajo nivel: datos crudos recibidos
             status_code = response['status_code']
             position = response['position']
@@ -94,24 +105,18 @@ class CarouselController:
             status = interpretar_estado_plc(response['status_code'])
             self.logger.info(
                 f"[PLC] Respuesta recibida: status_code={response['status_code']}, position={response['position']}")
-            estado_despues = None
-            try:
-                if hasattr(self.plc, 'get_current_status'):
-                    estado_despues = self.plc.get_current_status()
-            except Exception:
-                estado_despues = None
             operations_logger.info(
-                f"[COMANDO] IP/Proceso: {remote_addr} | Comando: {command} | Argumento: {argument} | Resultado: OK | Estado antes: {estado_antes} | Estado después: {estado_despues}")
+                f"[COMANDO] IP/Proceso: {remote_addr} | Comando: {command} | Argumento: {argument} | Resultado: OK")
             return {
                 'status': status,
-                'position': response['position'],
+                'position': response['position'] + 1,
                 'raw_status': response['status_code']
             }
         except Exception as e:
             self.logger.error(
                 f"[PLC] Error en send_command (comando={command}, argumento={argument}): {str(e)}")
             operations_logger.error(
-                f"[COMANDO] IP/Proceso: {remote_addr} | Comando: {command} | Argumento: {argument} | Resultado: ERROR | Error: {str(e)} | Estado antes: {estado_antes}")
+                f"[COMANDO] IP/Proceso: {remote_addr} | Comando: {command} | Argumento: {argument} | Resultado: ERROR | Error: {str(e)}")
             raise RuntimeError(f"Fallo en comunicación PLC: {str(e)}")
 
     def get_current_status(self) -> dict:
@@ -128,15 +133,15 @@ class CarouselController:
         Mueve el carrusel a una posición específica.
 
         Args:
-            target: Posición objetivo (0-9)
+            target: Posición objetivo (1-indexada, 1 = primer cangilón)
 
         Returns:
             Respuesta del PLC
         """
-        if not (0 <= target <= 9):
-            raise ValueError("Posición debe estar entre 0-9")
+        if not (1 <= target <= 255):
+            raise ValueError("Posición debe estar entre 1 y 255")
 
-        return self.send_command(1, target)  # Comando 1 = MUEVETE
+        return self.send_command(1, target - 1)  # Comando 1 = MUEVETE (PLC es 0-indexado)
 
     def verify_ready_state(self) -> bool:
         """

@@ -125,6 +125,10 @@ class PLC:
                 data = self.sock.recv(2)
                 if len(data) < 2:
                     raise RuntimeError("Respuesta incompleta del PLC")
+                self.logger.warning(
+                    "[RAW PLC] bytes recibidos: %s (hex: %s) len=%d",
+                    list(data), data.hex(), len(data),
+                )
                 status, position = struct.unpack('BB', data)
                 return {
                     'status_code': status,
