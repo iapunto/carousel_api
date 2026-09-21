@@ -229,9 +229,10 @@ class MainWindow:
                 messagebox.showerror(
                     "Error", "El argumento debe estar entre 0 y 255.")
                 return
-            # Construir la URL de la API
+            # Construir la URL de la API (siempre multi-PLC)
             api_port = self.config.get('api_port', 5000)
-            url = f"http://localhost:{api_port}/v1/command"
+            machine_id = self.get_selected_machine_id() or "machine_1"
+            url = f"http://localhost:{api_port}/v1/machines/{machine_id}/command"
             payload = {"command": command, "argument": argument}
             try:
                 response = requests.post(url, json=payload, timeout=5)
@@ -579,19 +580,12 @@ class MainWindow:
             # Determinar el puerto de la API
             api_port = self._get_api_port()
 
-            # Construir payload para comando
-            if len(self.available_machines) > 1:  # Multi-PLC
-                url = f"http://localhost:{api_port}/v1/machines/{machine_id}/command"
-                payload = {
-                    "command": 1,  # Comando de movimiento
-                    "argument": cangilon_position
-                }
-            else:  # Single-PLC
-                url = f"http://localhost:{api_port}/v1/command"
-                payload = {
-                    "command": 1,
-                    "argument": cangilon_position
-                }
+            # Construir payload para comando (siempre multi-PLC)
+            url = f"http://localhost:{api_port}/v1/machines/{machine_id}/command"
+            payload = {
+                "command": 1,  # Comando de movimiento
+                "argument": cangilon_position
+            }
 
             # Enviar comando via API REST
             import requests
@@ -873,48 +867,31 @@ class MainWindow:
                 api_port = self._get_api_port()
                 import requests
 
-                # Solicitar estado via HTTP (más rápido que WebSocket)
-                if len(self.available_machines) > 1:  # Multi-PLC
-                    # Solicitar estado de cada máquina individualmente
-                    machines_status = {}
-                    for machine in self.available_machines:
-                        machine_id = machine["id"]
-                        try:
-                            url = f"http://localhost:{api_port}/v1/machines/{machine_id}/status"
-                            response = requests.get(url, timeout=2)
-                            if response.status_code == 200:
-                                machine_data = response.json()
-                                if machine_data.get('success'):
-                                    machines_status[machine_id] = machine_data['data']
-                                else:
-                                    machines_status[machine_id] = {
-                                        'error': machine_data.get('error', 'Error desconocido')}
+                # Solicitar estado via HTTP (siempre multi-PLC)
+                machines_status = {}
+                for machine in self.available_machines:
+                    machine_id = machine["id"]
+                    try:
+                        url = f"http://localhost:{api_port}/v1/machines/{machine_id}/status"
+                        response = requests.get(url, timeout=2)
+                        if response.status_code == 200:
+                            machine_data = response.json()
+                            if machine_data.get('success'):
+                                machines_status[machine_id] = machine_data['data']
                             else:
                                 machines_status[machine_id] = {
-                                    'error': f'HTTP {response.status_code}'}
-                        except Exception as e:
-                            machines_status[machine_id] = {'error': str(e)}
+                                    'error': machine_data.get('error', 'Error desconocido')}
+                        else:
+                            machines_status[machine_id] = {
+                                'error': f'HTTP {response.status_code}'}
+                    except Exception as e:
+                        machines_status[machine_id] = {'error': str(e)}
 
-                    # Actualizar GUI con datos multi-PLC
-                    self.root.after(
-                        0, self.update_multi_plc_status, machines_status)
-                    debug_print(
-                        f"✅ Estado inicial cargado vía HTTP: {len(machines_status)} máquinas")
-
-                else:  # Single-PLC
-                    url = f"http://localhost:{api_port}/v1/status"
-                    response = requests.get(url, timeout=3)
-
-                    if response.status_code == 200:
-                        status_data = response.json()
-                        # Formato single-PLC
-                        if status_data.get('success'):
-                            self.root.after(
-                                0, self.update_single_plc_status, status_data.get('data', {}))
-                        debug_print("✅ Estado inicial cargado vía HTTP")
-                    else:
-                        debug_print(
-                            f"⚠️ Error HTTP {response.status_code}: usando WebSocket como fallback")
+                # Actualizar GUI con datos multi-PLC
+                self.root.after(
+                    0, self.update_multi_plc_status, machines_status)
+                debug_print(
+                    f"✅ Estado inicial cargado vía HTTP: {len(machines_status)} máquinas")
 
             except requests.exceptions.RequestException as e:
                 debug_print(
