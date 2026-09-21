@@ -223,3 +223,6 @@ debug.log
 
 # Ignorar archivos de configuración y temporales de herramientas
 config.json
+
+# Backups generados por la GUI al cambiar configuración
+config_backups/
