@@ -1245,9 +1245,15 @@ class MainWindow:
                     card["position_label"].configure(
                         text="---", text_color="#FF3333")
                 else:
-                    # Actualizar estado normal
-                    interpreted_status = interpretar_estado_plc(
-                        machine_data.get('status_code', 0))
+                    # Actualizar estado normal: usar 'status' ya interpretado
+                    # por la API; fallback a interpretar raw_status/status_code
+                    interpreted_status = (
+                        machine_data.get('status')
+                        if isinstance(machine_data.get('status'), dict)
+                        else interpretar_estado_plc(
+                            machine_data.get(
+                                'raw_status',
+                                machine_data.get('status_code', 0))))
 
                     # Actualizar indicador de conexión
                     card["status_indicator"].configure(

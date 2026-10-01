@@ -36,6 +36,13 @@ class PLC:
         self.logger = logging.getLogger(__name__)
         self.max_retries = 3
         self.base_backoff = 0.5  # segundos
+        # Circuit breaker: tras fallos de conexión consecutivos el PLC se
+        # marca offline por una ventana creciente y las llamadas fallan al
+        # instante en vez de bloquear ~17s por request (máquina ausente).
+        self._consecutive_failures = 0
+        self._offline_until = 0.0
+        self.offline_backoff_base = 15.0   # segundos tras el 1er fallo
+        self.offline_backoff_max = 120.0   # tope de la ventana offline
 
     def __enter__(self):
         """Permite uso con 'with' para gestión automática de recursos"""
@@ -55,6 +62,12 @@ class PLC:
         if self.sock:
             return True  # Ya conectado
 
+        remaining = self._offline_until - time.time()
+        if remaining > 0:
+            self.logger.info(
+                f"PLC offline (circuito abierto, reintento en {remaining:.0f}s)")
+            return False
+
         for attempt in range(1, self.max_retries + 1):
             try:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,6 +75,8 @@ class PLC:
                 self.sock.connect((self.ip, self.port))
                 self.logger.info(
                     f"Conexión establecida con el PLC en {self.ip}:{self.port}")
+                self._consecutive_failures = 0
+                self._offline_until = 0.0
                 return True
             except (socket.timeout, ConnectionRefusedError, OSError) as e:
                 self.logger.warning(
@@ -71,8 +86,15 @@ class PLC:
                     backoff = self.base_backoff * \
                         (2 ** (attempt - 1)) + random.uniform(0, 0.2)
                     time.sleep(backoff)
+        self._consecutive_failures += 1
+        window = min(
+            self.offline_backoff_base * self._consecutive_failures,
+            self.offline_backoff_max,
+        )
+        self._offline_until = time.time() + window
         self.logger.error(
-            f"No se pudo conectar al PLC tras {self.max_retries} intentos.")
+            f"No se pudo conectar al PLC tras {self.max_retries} intentos. "
+            f"Circuito abierto por {window:.0f}s.")
         return False
 
     def close(self):

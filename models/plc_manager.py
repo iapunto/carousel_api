@@ -77,6 +77,7 @@ class PLCManager:
 
                 # Crear controlador para este PLC
                 controller = CarouselController(plc_instance)
+                controller.machine_id = machine_id
 
                 # Almacenar referencias
                 self.plc_instances[machine_id] = plc_instance
@@ -152,7 +153,8 @@ class PLCManager:
             raise
 
     def send_command_to_machine(self, machine_id: str, command: int,
-                                argument: int = None, client_ip: str = None) -> Dict[str, Any]:
+                                argument: int = None, client_ip: str = None,
+                                skip_position_check: bool = False) -> Dict[str, Any]:
         """
         Envía un comando a una máquina específica.
 
@@ -161,6 +163,7 @@ class PLCManager:
             command: Código de comando (0-255)
             argument: Argumento opcional (0-255)
             client_ip: IP del cliente que envía el comando (para logging)
+            skip_position_check: Omitir guardia de misma posición (force)
 
         Returns:
             Respuesta del PLC
@@ -180,7 +183,8 @@ class PLCManager:
         try:
             with self.connection_locks[machine_id]:
                 result = self.controllers[machine_id].send_command(
-                    command, argument, client_ip)
+                    command, argument, client_ip,
+                    skip_position_check=skip_position_check)
 
             self.connection_logger.info(
                 f"COMMAND_RESPONSE | Cliente: {client_ip or 'Unknown'} | "
@@ -198,7 +202,8 @@ class PLCManager:
             raise
 
     def move_machine_to_position(self, machine_id: str, target_position: int,
-                                 client_ip: str = None) -> Dict[str, Any]:
+                                 client_ip: str = None,
+                                 skip_position_check: bool = False) -> Dict[str, Any]:
         """
         Mueve una máquina a una posición específica.
 
@@ -206,6 +211,7 @@ class PLCManager:
             machine_id: ID de la máquina
             target_position: Posición objetivo (0-9)
             client_ip: IP del cliente (para logging)
+            skip_position_check: Omitir guardia de misma posición (force)
 
         Returns:
             Respuesta del PLC
@@ -220,7 +226,8 @@ class PLCManager:
         try:
             with self.connection_locks[machine_id]:
                 result = self.controllers[machine_id].move_to_position(
-                    target_position)
+                    target_position,
+                    skip_position_check=skip_position_check)
 
             self.connection_logger.info(
                 f"MOVE_RESPONSE | Cliente: {client_ip or 'Unknown'} | "
@@ -235,6 +242,124 @@ class PLCManager:
                 f"Máquina: {machine_id} | Posición_objetivo: {target_position} | "
                 f"Error: {str(e)}")
             raise
+
+    def get_machine_diagnostics(self, machine_id: str,
+                                client_ip: str = None) -> Dict[str, Any]:
+        """Diagnóstico estilo 'computadora de abordo': estado + fallas
+        localizadas + registros físicos del PLC vía Modbus.
+
+        Fuentes:
+        - Protocolo :3200 → bits de estado (READY/RUN/MODO/ALARMA/...)
+        - Modbus :502 → D0 posición física, D2 target, D4/D6/D10 pasos
+        """
+        if machine_id not in self.controllers:
+            raise ValueError(f"Máquina '{machine_id}' no encontrada")
+
+        result = {
+            "machine_id": machine_id,
+            "checked_at": datetime.now().isoformat(),
+            "online": False,
+            "status": {},
+            "position": None,
+            "target_position": None,
+            "position_desync": False,
+            "step_counters": {},
+            "faults": [],
+            "warnings": [],
+        }
+
+        controller = self.controllers[machine_id]
+        plc_ip = controller.plc.ip
+
+        # 1) Bits de estado por protocolo :3200
+        try:
+            status_resp = controller.get_current_status()
+            result["online"] = True
+            result["status"] = status_resp.get("status", {})
+            result["raw_status"] = status_resp.get("raw_status")
+            if status_resp.get("position") is not None:
+                result["position"] = status_resp["position"]
+                result["position_source"] = status_resp.get(
+                    "position_source")
+        except Exception as e:
+            result["faults"].append({
+                "code": "COMM_FAILURE",
+                "severity": "critical",
+                "component": "Comunicación :3200",
+                "message": f"PLC no responde por socket: {e}",
+            })
+            return result
+
+        # 2) Registros físicos por Modbus :502
+        try:
+            from models.modbus_delta import read_registers
+            regs = read_registers(plc_ip, 0, 24, timeout=2.0)
+            if regs:
+                result["registers"] = {
+                    "D0_position_real": regs[0],
+                    "D2_target": regs[2],
+                    "D4_steps_a": regs[4],
+                    "D6_steps_b": regs[6],
+                    "D8_flag": regs[8],
+                    "D10_steps_c": regs[10],
+                    "D16_counter": regs[16],
+                    "D20_param": regs[20],
+                    "D22_target_copy": regs[22],
+                }
+                result["position"] = regs[0] + 1
+                result["target_position"] = regs[2] + 1
+                result["position_source"] = "modbus"
+                result["position_desync"] = regs[0] != regs[2]
+                result["step_counters"] = {
+                    "D4": regs[4], "D6": regs[6], "D10": regs[10]}
+        except Exception as e:
+            result["warnings"].append(
+                f"Modbus :502 no disponible, posición por protocolo: {e}")
+
+        # 3) Fallas localizadas a partir de los bits interpretados
+        status = result["status"]
+        fault_map = {
+            "READY": ("no puede operar", "Equipo no listo", "General"),
+            "ALARMA": ("alarma activa", "Alarma activa en el equipo",
+                       "Panel de alarmas"),
+            "PARADA_EMERGENCIA": ("presionada y activa",
+                                  "Parada de emergencia activa",
+                                  "Botón de paro / barra de seguridad"),
+            "VFD": ("error", "Error en el variador de velocidad",
+                    "Variador (VFD)"),
+            "ERROR_POSICIONAMIENTO": ("ha ocurrido", "Error de posicionamiento",
+                                      "Sensores de posición"),
+        }
+        for key, (needle, message, component) in fault_map.items():
+            text = (status.get(key) or "").lower()
+            if needle in text:
+                result["faults"].append({
+                    "code": key, "severity": "error",
+                    "component": component, "message": message,
+                })
+        run_text = (status.get("RUN") or "").lower()
+        if "en movimiento" in run_text:
+            result["warnings"].append("Equipo en movimiento")
+        modo = (status.get("MODO_OPERACION") or "").lower()
+        if "manual" in modo:
+            result["warnings"].append(
+                "Modo Manual — comandos remotos bloqueados")
+        if result["position_desync"]:
+            result["faults"].append({
+                "code": "POSITION_DESYNC",
+                "severity": "warning",
+                "component": "Contador de posición",
+                "message": (
+                    f"Comandada ({result['target_position']}) difiere de la "
+                    f"física ({result['position']}) — un movimiento fue "
+                    "interrumpido o el contador se desfasó"),
+            })
+
+        result["fault_count"] = len(result["faults"])
+        result["healthy"] = result["online"] and not any(
+            f["severity"] == "critical" or f["severity"] == "error"
+            for f in result["faults"])
+        return result
 
     def get_machine_info(self, machine_id: str) -> Optional[Dict[str, Any]]:
         """

@@ -226,3 +226,6 @@ config.json
 
 # Backups generados por la GUI al cambiar configuración
 config_backups/
+
+# Caché de estado PLC compartida (runtime — se regenera)
+plc_status_cache.json
