@@ -19,8 +19,10 @@ from commons.utils import interpretar_estado_plc
 from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from controllers.carousel_controller import CarouselController
 import time
-from plc_cache import plc_status_cache, plc_access_lock, plc_interprocess_lock
-from commons.error_codes import PLC_CONN_ERROR, PLC_BUSY, BAD_COMMAND, BAD_REQUEST, INTERNAL_ERROR
+from plc_cache import (plc_status_cache, plc_access_lock,
+                       plc_interprocess_lock, read_cached_status)
+from commons.error_codes import (PLC_CONN_ERROR, PLC_BUSY, PLC_UNSAFE_STATE,
+                                 BAD_COMMAND, BAD_REQUEST, INTERNAL_ERROR)
 from filelock import Timeout
 
 
@@ -82,6 +84,68 @@ def create_app(plc=None, plc_manager=None):
     else:
         logger.info("API iniciada en modo SINGLE-PLC")
 
+    def _default_machine_id():
+        """Primera máquina configurada (para rutas legacy /v1/status y /v1/command)"""
+        machines = plc_manager.get_available_machines()
+        if not machines:
+            raise RuntimeError("No hay máquinas PLC configuradas")
+        return machines[0]["id"]
+
+    # Antigüedad máxima aceptable de la caché de estado del PLC (seg).
+    # Un poco por encima del intervalo de poll en reposo del WS server.
+    STATUS_CACHE_TTL = float(os.getenv("PLC_STATUS_CACHE_TTL", "25"))
+
+    def _safety_blockers(machine_id=None, force=False):
+        """Verifica que el PLC esté en estado seguro para recibir comandos.
+
+        Lee el estado FRESCO del PLC (nunca la caché — los estados de
+        error cambian rápido). El hardware ya bloquea el modo Manual con
+        el switch físico, pero NO bloquea estados de error: si el PLC
+        reporta VFD/alarma/parada y llega un comando, la máquina se
+        mueve igual. Esta guardia es la última línea de defensa.
+
+        Args:
+            machine_id: ID de máquina (multi-PLC) o None (single-PLC).
+            force: Bypass explícito para diagnóstico técnico (errores
+                   fantasma reportados por el PLC).
+
+        Returns:
+            Lista de strings con los bloqueos detectados; [] = seguro.
+        """
+        if force:
+            return []
+        if is_multi_plc:
+            status = plc_manager.get_machine_status(
+                machine_id, client_ip="safety_check")
+            raw = status.get("raw_status")
+        else:
+            status = carousel_controller.get_current_status()
+            raw = status.get("raw_status", status.get("status_code"))
+        if raw is None:
+            raise RuntimeError("No se pudo leer el estado del PLC")
+        blockers = []
+        if not (raw & 0x01):
+            blockers.append("READY: el equipo no está listo para operar")
+        if (raw >> 1) & 0x01:
+            blockers.append("RUN: el equipo está en movimiento")
+        if not ((raw >> 2) & 0x01):
+            blockers.append("MODO_OPERACION: el equipo está en Modo Manual")
+        if raw & 0x08:
+            blockers.append("ALARMA activa")
+        if not ((raw >> 4) & 0x01):
+            blockers.append("PARADA DE EMERGENCIA activa")
+        if raw & 0x20:
+            blockers.append("Error en el variador de velocidad (VFD)")
+        if raw & 0x40:
+            blockers.append("Error de posicionamiento")
+        return blockers
+
+    def _is_forced(data=None):
+        """Bypass de seguridad: JSON {"force": true} o query ?force=1"""
+        if data and data.get("force") is True:
+            return True
+        return request.args.get("force", "").lower() in ("1", "true", "yes")
+
     @app.errorhandler(Exception)
     def handle_exception(e):
         logger.exception(f"Error no controlado: {str(e)}")
@@ -120,7 +184,16 @@ def create_app(plc=None, plc_manager=None):
         """
         try:
             logger.info(f"[STATUS] Petición desde {request.remote_addr}")
-            result = carousel_controller.get_current_status()
+            if is_multi_plc:
+                machine_id = _default_machine_id()
+                # Caché compartida: el WS server es el único poller del PLC
+                result = read_cached_status(
+                    machine_id, max_age=STATUS_CACHE_TTL)
+                if result is None:
+                    result = plc_manager.get_machine_status(
+                        machine_id, client_ip=request.remote_addr)
+            else:
+                result = carousel_controller.get_current_status()
             logger.info(f"[STATUS] Respuesta: {result}")
             return jsonify({
                 'success': True,
@@ -196,6 +269,23 @@ def create_app(plc=None, plc_manager=None):
                 'error': "El parámetro 'argument' debe ser un entero entre 0 y 255",
                 'code': BAD_COMMAND
             }), 400
+        # Guardia de seguridad: comandos que accionan (no STATUS) exigen
+        # estado sin errores. Lectura FRESCA del PLC, nunca de la caché.
+        if command != 0 and is_multi_plc:
+            try:
+                blockers = _safety_blockers(
+                    _default_machine_id(), force=_is_forced(data))
+            except Exception as e:
+                blockers = [f"No se pudo verificar el estado del PLC: {e}"]
+            if blockers:
+                logger.warning(
+                    f"[COMMAND] Bloqueado por seguridad desde {request.remote_addr}: {blockers}")
+                return jsonify({
+                    'success': False,
+                    'data': {'blockers': blockers},
+                    'error': 'Comando bloqueado: ' + ' | '.join(blockers),
+                    'code': PLC_UNSAFE_STATE
+                }), 409
         acquired_interprocess = False
         acquired_global = False
         try:
@@ -220,7 +310,13 @@ def create_app(plc=None, plc_manager=None):
                     'code': PLC_BUSY
                 }), 409
             # Ejecutar el comando usando el controlador
-            result = carousel_controller.send_command(command, argument)
+            if is_multi_plc:
+                result = plc_manager.send_command_to_machine(
+                    _default_machine_id(), command, argument,
+                    client_ip=request.remote_addr,
+                    skip_position_check=_is_forced(data))
+            else:
+                result = carousel_controller.send_command(command, argument)
             logger.info(f"[COMMAND] Respuesta: {result}")
             if isinstance(result, dict) and result.get('error') == 'PLC en movimiento':
                 return jsonify({
@@ -376,8 +472,12 @@ def create_app(plc=None, plc_manager=None):
             try:
                 logger.info(
                     f"[MACHINE_STATUS] Petición para {machine_id} desde {request.remote_addr}")
-                result = plc_manager.get_machine_status(
-                    machine_id, request.remote_addr)
+                # Caché compartida: el WS server es el único poller del PLC
+                result = read_cached_status(
+                    machine_id, max_age=STATUS_CACHE_TTL)
+                if result is None:
+                    result = plc_manager.get_machine_status(
+                        machine_id, request.remote_addr)
                 logger.info(
                     f"[MACHINE_STATUS] Respuesta para {machine_id}: {result}")
                 return jsonify({
@@ -403,6 +503,57 @@ def create_app(plc=None, plc_manager=None):
                     'data': None,
                     'error': f'Error de comunicación con la máquina {machine_id}: {str(e)}',
                     'code': PLC_CONN_ERROR
+                }), 500
+
+        @app.route('/v1/machines/<machine_id>/diagnostics', methods=['GET'])
+        def get_machine_diagnostics(machine_id):
+            """
+            Diagnóstico completo de una máquina (estilo OBD vehicular).
+            ---
+            tags:
+              - Multi-PLC
+            parameters:
+              - in: path
+                name: machine_id
+                required: true
+                schema:
+                  type: string
+                  example: "machine_1"
+                description: ID de la máquina
+            responses:
+              200:
+                description: Diagnóstico completo con fallas localizadas.
+              404:
+                description: Máquina no encontrada.
+              500:
+                description: Error interno.
+            """
+            try:
+                logger.info(
+                    f"[DIAGNOSTICS] Petición para {machine_id} desde {request.remote_addr}")
+                result = plc_manager.get_machine_diagnostics(
+                    machine_id, request.remote_addr)
+                return jsonify({
+                    'success': True,
+                    'data': result,
+                    'error': None,
+                    'code': None
+                }), 200
+            except ValueError as e:
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': str(e),
+                    'code': BAD_REQUEST
+                }), 404
+            except Exception as e:
+                logger.error(
+                    f"[DIAGNOSTICS] Error para {machine_id}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'data': None,
+                    'error': f'Error en diagnóstico: {str(e)}',
+                    'code': INTERNAL_ERROR
                 }), 500
 
         @app.route('/v1/machines/<machine_id>/command', methods=['POST'])
@@ -481,11 +632,31 @@ def create_app(plc=None, plc_manager=None):
                     'code': BAD_COMMAND
                 }), 400
 
+            # Guardia de seguridad: comandos que accionan (no STATUS) exigen
+            # estado sin errores. Lectura FRESCA del PLC, nunca de la caché.
+            if command != 0:
+                try:
+                    blockers = _safety_blockers(
+                        machine_id, force=_is_forced(data))
+                except Exception as e:
+                    blockers = [
+                        f"No se pudo verificar el estado del PLC: {e}"]
+                if blockers:
+                    logger.warning(
+                        f"[MACHINE_COMMAND] Bloqueado por seguridad para {machine_id} desde {request.remote_addr}: {blockers}")
+                    return jsonify({
+                        'success': False,
+                        'data': {'blockers': blockers},
+                        'error': 'Comando bloqueado: ' + ' | '.join(blockers),
+                        'code': PLC_UNSAFE_STATE
+                    }), 409
+
             try:
                 logger.info(
                     f"[MACHINE_COMMAND] Comando {command}({argument}) para {machine_id} desde {request.remote_addr}")
                 result = plc_manager.send_command_to_machine(
-                    machine_id, command, argument, request.remote_addr)
+                    machine_id, command, argument, request.remote_addr,
+                    skip_position_check=_is_forced(data))
                 logger.info(
                     f"[MACHINE_COMMAND] Respuesta para {machine_id}: {result}")
                 return jsonify({
@@ -567,11 +738,28 @@ def create_app(plc=None, plc_manager=None):
                     'code': BAD_COMMAND
                 }), 400
 
+            # Guardia de seguridad: lectura FRESCA del PLC, nunca de la caché.
+            try:
+                blockers = _safety_blockers(
+                    machine_id, force=_is_forced(data))
+            except Exception as e:
+                blockers = [f"No se pudo verificar el estado del PLC: {e}"]
+            if blockers:
+                logger.warning(
+                    f"[MACHINE_MOVE] Bloqueado por seguridad para {machine_id} desde {request.remote_addr}: {blockers}")
+                return jsonify({
+                    'success': False,
+                    'data': {'blockers': blockers},
+                    'error': 'Movimiento bloqueado: ' + ' | '.join(blockers),
+                    'code': PLC_UNSAFE_STATE
+                }), 409
+
             try:
                 logger.info(
                     f"[MACHINE_MOVE] Mover {machine_id} a posición {position} desde {request.remote_addr}")
                 result = plc_manager.move_machine_to_position(
-                    machine_id, position, request.remote_addr)
+                    machine_id, position, request.remote_addr,
+                    skip_position_check=_is_forced(data))
                 logger.info(
                     f"[MACHINE_MOVE] Respuesta para {machine_id}: {result}")
                 return jsonify({

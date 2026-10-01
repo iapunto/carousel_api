@@ -15,6 +15,7 @@ Fecha: 2025-03-13
 import asyncio
 import json
 import logging
+import os
 import websockets
 import threading
 import time
@@ -24,6 +25,15 @@ from commons.config_manager import ConfigManager
 from models.plc_manager import PLCManager
 from models.plc import PLC
 from controllers.carousel_controller import CarouselController
+from plc_cache import write_machine_status
+
+# Intervalos del poller único de estado (segundos).
+# Este proceso es el ÚNICO que consulta el PLC periódicamente; el resto
+# lee la caché compartida en plc_status_cache.json.
+# Defaults ajustados para operación casi tiempo-real (feedback feria):
+# el PLC abre/cierra socket por intercambio y tolera ~1 consulta/seg.
+POLL_IDLE_SECONDS = float(os.getenv("PLC_POLL_IDLE_SECONDS", "3"))
+POLL_MOVING_SECONDS = float(os.getenv("PLC_POLL_MOVING_SECONDS", "1"))
 
 
 class WebSocketServer:
@@ -325,41 +335,56 @@ class WebSocketServer:
         await websocket.send(json.dumps(response))
 
     async def status_broadcast_loop(self):
-        """Loop para broadcast periódico de estado."""
+        """Poller único de estado + broadcast a clientes conectados.
+
+        Consulta el PLC cada POLL_IDLE_SECONDS (reposo) o
+        POLL_MOVING_SECONDS (si alguna máquina está en movimiento) y
+        escribe el resultado en la caché compartida. El broadcast a los
+        clientes WebSocket usa esos mismos datos — nunca genera tráfico
+        adicional hacia el PLC.
+        """
         while self.running:
             try:
+                any_moving = False
+
+                if self.is_multi_plc:
+                    # Estado de todas las máquinas
+                    machines = self.plc_manager.get_available_machines()
+                    all_status = {}
+
+                    for machine in machines:
+                        try:
+                            status = self.plc_manager.get_machine_status(
+                                machine["id"], "broadcast")
+                            write_machine_status(machine["id"], status)
+                            if (status.get("raw_status", 0) >> 1) & 1:
+                                any_moving = True
+                        except Exception as e:
+                            status = {"error": str(e)}
+                        all_status[machine["id"]] = status
+
+                    broadcast_msg = {
+                        "type": "status_broadcast",
+                        "status": all_status,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                else:
+                    # Estado single-PLC
+                    status = self.carousel_controller.get_current_status()
+                    write_machine_status("single_plc", status)
+                    if (status.get("raw_status", 0) >> 1) & 1:
+                        any_moving = True
+                    broadcast_msg = {
+                        "type": "status_broadcast",
+                        "status": status,
+                        "timestamp": datetime.now().isoformat()
+                    }
+
                 if self.clients:
-                    if self.is_multi_plc:
-                        # Broadcast estado de todas las máquinas
-                        machines = self.plc_manager.get_available_machines()
-                        all_status = {}
-
-                        for machine in machines:
-                            try:
-                                status = self.plc_manager.get_machine_status(
-                                    machine["id"], "broadcast")
-                                all_status[machine["id"]] = status
-                            except Exception as e:
-                                all_status[machine["id"]] = {"error": str(e)}
-
-                        broadcast_msg = {
-                            "type": "status_broadcast",
-                            "status": all_status,
-                            "timestamp": datetime.now().isoformat()
-                        }
-                    else:
-                        # Broadcast estado single-PLC
-                        status = self.carousel_controller.get_current_status()
-                        broadcast_msg = {
-                            "type": "status_broadcast",
-                            "status": status,
-                            "timestamp": datetime.now().isoformat()
-                        }
-
                     await self.broadcast_message(broadcast_msg)
 
-                # Esperar 2 segundos antes del próximo broadcast
-                await asyncio.sleep(2)
+                await asyncio.sleep(
+                    POLL_MOVING_SECONDS if any_moving else POLL_IDLE_SECONDS)
 
             except Exception as e:
                 self.logger.error(f"Error en status_broadcast_loop: {e}")

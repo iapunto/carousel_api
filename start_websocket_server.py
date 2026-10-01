@@ -76,7 +76,7 @@ El servidor se conectará automáticamente a los PLCs configurados en:
 
     # Configurar stdout para UTF-8 en Windows
     import sys
-    if sys.platform == "win32":
+    if sys.platform == "win32" and sys.stdout is not None and hasattr(sys.stdout, "buffer"):
         import io
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
