@@ -94,6 +94,10 @@ def create_app(plc=None, plc_manager=None):
     # Antigüedad máxima aceptable de la caché de estado del PLC (seg).
     # Un poco por encima del intervalo de poll en reposo del WS server.
     STATUS_CACHE_TTL = float(os.getenv("PLC_STATUS_CACHE_TTL", "25"))
+    # Antigüedad máxima de la caché para la guardia de seguridad (seg).
+    # Más corta: las alarmas cambian rápido; el poller refresca cada
+    # ~1-3 s, así que 4 s equivale a "última lectura del poller".
+    SAFETY_CACHE_TTL = float(os.getenv("PLC_SAFETY_CACHE_TTL", "4"))
 
     def _safety_blockers(machine_id=None, force=False):
         """Verifica que el PLC esté en estado seguro para recibir comandos.
@@ -115,8 +119,15 @@ def create_app(plc=None, plc_manager=None):
         if force:
             return []
         if is_multi_plc:
-            status = plc_manager.get_machine_status(
-                machine_id, client_ip="safety_check")
+            # Preferir la caché muy fresca del poller WS — evita un
+            # roundtrip completo al PLC antes de cada comando. Si la
+            # caché está viciada/ausente (poller caído), lectura viva:
+            # la seguridad nunca depende de un dato viejo.
+            status = read_cached_status(
+                machine_id, max_age=SAFETY_CACHE_TTL)
+            if status is None:
+                status = plc_manager.get_machine_status(
+                    machine_id, client_ip="safety_check")
             raw = status.get("raw_status")
         else:
             status = carousel_controller.get_current_status()

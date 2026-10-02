@@ -11,7 +11,7 @@ Fecha de creación: 2023-09-13
 
 from models.plc import PLC  # Importación explícita del PLC real [[2]]
 from models.modbus_delta import read_real_position, read_target_position
-from plc_cache import read_last_position, write_last_position
+from plc_cache import read_last_position, write_last_position, read_cached_status
 # Interpretación de estados [[3]]
 from commons.utils import interpretar_estado_plc, validar_comando, validar_argumento
 import time
@@ -51,7 +51,7 @@ class CarouselController:
         # actualiza posición real cada ~1s mientras se mueve, así que
         # el comando no necesita bloquear esperando el fin de carrera.
         self.response_delay = float(os.getenv("PLC_RESPONSE_DELAY", "1.0"))
-        self.move_ack_delay = float(os.getenv("PLC_MOVE_ACK_DELAY", "2.0"))
+        self.move_ack_delay = float(os.getenv("PLC_MOVE_ACK_DELAY", "1.0"))
         # ID de máquina (lo asigna PLCManager) para persistir posición
         # comandada en la caché compartida
         self.machine_id = None
@@ -97,7 +97,7 @@ class CarouselController:
                     # marca ya pasada. La posición real se lee por Modbus
                     # (D0); el byte del protocolo :3200 siempre devuelve 0
                     # y NO es confiable. Respaldo: última posición comandada.
-                    real_idx = self._real_position_index()
+                    real_idx = self._real_position_index_cached()
                     last_cmd = self._remembered_position()
                     already = (
                         (real_idx is not None and real_idx == plc_argument) or
@@ -205,6 +205,21 @@ class CarouselController:
         except Exception as e:
             self.logger.warning(f"[MODBUS] No se pudo leer posición real: {e}")
             return None
+
+    def _real_position_index_cached(self, max_age=4.0):
+        """Posición física (0-indexada) preferida desde la caché del
+        poller WS (se refresca cada ~1-3 s); si no hay dato fresco,
+        lectura Modbus viva. Ahorra un roundtrip por comando."""
+        if self.machine_id:
+            try:
+                cached = read_cached_status(self.machine_id, max_age=max_age)
+            except Exception:
+                cached = None
+            if cached:
+                pos = cached.get("position")
+                if isinstance(pos, int) and pos >= 1:
+                    return pos - 1
+        return self._real_position_index()
 
     def _remembered_position(self):
         """Última posición comandada (1-indexada): memoria + caché compartida."""
