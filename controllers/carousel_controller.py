@@ -56,9 +56,14 @@ class CarouselController:
         # comandada en la caché compartida
         self.machine_id = None
         self._last_move_position = None
+        # Consulta de estado extra tras el ACK de movimiento (informativa;
+        # el poller WS reporta la posición real en vivo). Off por defecto:
+        # ahorra ~1.5 s de bloqueo por comando.
+        self.move_status_after = os.getenv("PLC_MOVE_STATUS_AFTER", "0") in ("1", "true", "yes")
 
     def send_command(self, command: int, argument: int = None, remote_addr=None,
-                     skip_position_check: bool = False) -> dict:
+                     skip_position_check: bool = False,
+                     include_position: bool = True) -> dict:
         """
         Envía un comando al PLC y registra en la bitácora de operaciones.
 
@@ -143,15 +148,16 @@ class CarouselController:
                     # poller WS reporta la posición real en vivo (~1s).
                     self.logger.info("[PLC] Comando de movimiento: esperando ACK...")
                     time.sleep(self.move_ack_delay)
-                    try:
-                        self.plc.send_command(0)  # Comando STATUS
-                        time.sleep(0.5)
-                        final_response = self.plc.receive_response()
-                        self.logger.info(
-                            f"[PLC] Estado final después de movimiento: {final_response}")
-                        response = final_response
-                    except Exception as e:
-                        self.logger.warning(f"[PLC] No se pudo consultar estado final: {e}")
+                    if self.move_status_after:
+                        try:
+                            self.plc.send_command(0)  # Comando STATUS
+                            time.sleep(0.5)
+                            final_response = self.plc.receive_response()
+                            self.logger.info(
+                                f"[PLC] Estado final después de movimiento: {final_response}")
+                            response = final_response
+                        except Exception as e:
+                            self.logger.warning(f"[PLC] No se pudo consultar estado final: {e}")
             # Log de bajo nivel: datos crudos recibidos
             status_code = response['status_code']
             position = response['position']
@@ -168,29 +174,21 @@ class CarouselController:
                 f"[PLC] Respuesta recibida: status_code={response['status_code']}, position={response['position']}")
             operations_logger.info(
                 f"[COMANDO] IP/Proceso: {remote_addr} | Comando: {command} | Argumento: {argument} | Resultado: OK")
-            # Posición real por Modbus (D0). El byte del protocolo :3200
-            # reporta siempre 0 — no es confiable como posición.
-            real_idx = self._real_position_index()
-            target_idx = read_target_position(
-                self.plc.ip) if real_idx is not None else None
-            desync = (
-                target_idx is not None and real_idx is not None
-                and target_idx != real_idx)
-            if desync:
-                self.logger.warning(
-                    f"[PLC] DESYNC posición: target(D2)={target_idx + 1} "
-                    f"pero física(D0)={real_idx + 1}")
-            return {
+            result = {
                 'status': status,
-                'position': (real_idx + 1) if real_idx is not None
-                            else response['position'] + 1,
-                'position_source': 'modbus' if real_idx is not None
-                                   else 'plc_byte',
-                'target_position': (target_idx + 1)
-                                   if target_idx is not None else None,
-                'position_desync': desync,
-                'raw_status': response['status_code']
+                'position': response['position'] + 1,
+                'position_source': 'plc_byte',
+                'target_position': None,
+                'position_desync': False,
+                'raw_status': response['status_code'],
             }
+            if include_position:
+                # Comando de movimiento: la posición "real" cambiará en
+                # segundos — la caché del poller es tan buena como una
+                # lectura viva aquí. Status (cmd 0): lectura viva, porque
+                # es lo que el poller guarda para los demás.
+                self.enrich_position(result, live=(command == 0))
+            return result
         except Exception as e:
             self.logger.error(
                 f"[PLC] Error en send_command (comando={command}, argumento={argument}): {str(e)}")
@@ -205,6 +203,31 @@ class CarouselController:
         except Exception as e:
             self.logger.warning(f"[MODBUS] No se pudo leer posición real: {e}")
             return None
+
+    def enrich_position(self, result: dict, live: bool = True):
+        """Agrega posición real (Modbus D0), target (D2) y desync a una
+        respuesta ya construida. Modbus va por :502 — socket distinto al
+        protocolo :3200 — así que puede llamarse fuera del lock del PLC.
+        `live=False` usa la caché del poller (comandos de movimiento:
+        la posición real está cambiando de todas formas)."""
+        real_idx = (self._real_position_index() if live
+                    else self._real_position_index_cached())
+        target_idx = (read_target_position(self.plc.ip)
+                      if real_idx is not None else None)
+        desync = (
+            target_idx is not None and real_idx is not None
+            and target_idx != real_idx)
+        if desync:
+            self.logger.warning(
+                f"[PLC] DESYNC posición: target(D2)={target_idx + 1} "
+                f"pero física(D0)={real_idx + 1}")
+        if real_idx is not None:
+            result['position'] = real_idx + 1
+            result['position_source'] = 'modbus'
+        result['target_position'] = (
+            target_idx + 1) if target_idx is not None else None
+        result['position_desync'] = desync
+        return result
 
     def _real_position_index_cached(self, max_age=4.0):
         """Posición física (0-indexada) preferida desde la caché del
@@ -233,14 +256,14 @@ class CarouselController:
         if self.machine_id:
             write_last_position(self.machine_id, position)
 
-    def get_current_status(self) -> dict:
+    def get_current_status(self, include_position: bool = True) -> dict:
         """
         Obtiene el estado actual del PLC sin enviar comandos.
 
         Returns:
             Diccionario con estado y posición
         """
-        return self.send_command(0)  # Comando 0 = STATUS
+        return self.send_command(0, include_position=include_position)
 
     def move_to_position(self, target: int, skip_position_check: bool = False) -> dict:
         """

@@ -136,8 +136,12 @@ class PLCManager:
             f"Máquina: {machine_id} | Timestamp: {datetime.now().isoformat()}")
 
         try:
+            # La parte :3200 va bajo lock; las lecturas Modbus :502 son
+            # otro socket — se hacen fuera para no retener el lock ~2s
             with self.connection_locks[machine_id]:
-                result = self.controllers[machine_id].get_current_status()
+                result = self.controllers[machine_id].get_current_status(
+                    include_position=False)
+            self.controllers[machine_id].enrich_position(result, live=True)
 
             self.connection_logger.info(
                 f"STATUS_RESPONSE | Cliente: {client_ip or 'Unknown'} | "
@@ -184,7 +188,12 @@ class PLCManager:
             with self.connection_locks[machine_id]:
                 result = self.controllers[machine_id].send_command(
                     command, argument, client_ip,
-                    skip_position_check=skip_position_check)
+                    skip_position_check=skip_position_check,
+                    include_position=False)
+            # Posición/target por Modbus fuera del lock — para el comando
+            # de movimiento basta la caché del poller (está en tránsito)
+            self.controllers[machine_id].enrich_position(
+                result, live=(command == 0))
 
             self.connection_logger.info(
                 f"COMMAND_RESPONSE | Cliente: {client_ip or 'Unknown'} | "
@@ -225,9 +234,11 @@ class PLCManager:
 
         try:
             with self.connection_locks[machine_id]:
-                result = self.controllers[machine_id].move_to_position(
-                    target_position,
-                    skip_position_check=skip_position_check)
+                result = self.controllers[machine_id].send_command(
+                    1, target_position, client_ip,
+                    skip_position_check=skip_position_check,
+                    include_position=False)
+            self.controllers[machine_id].enrich_position(result, live=False)
 
             self.connection_logger.info(
                 f"MOVE_RESPONSE | Cliente: {client_ip or 'Unknown'} | "
