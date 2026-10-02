@@ -47,11 +47,12 @@ class CarouselController:
         """
         self.plc = plc
         self.logger = logging.getLogger(__name__)
-        # Tiempo de espera para la respuesta del PLC. El poller WS
-        # actualiza posición real cada ~1s mientras se mueve, así que
-        # el comando no necesita bloquear esperando el fin de carrera.
-        self.response_delay = float(os.getenv("PLC_RESPONSE_DELAY", "1.0"))
-        self.move_ack_delay = float(os.getenv("PLC_MOVE_ACK_DELAY", "1.0"))
+        # Tiempo de espera para la respuesta del PLC. El PLC Delta
+        # responde en milisegundos y receive_response() ya bloquea con
+        # timeout de 5s — un sleep alto solo agrega latencia. 0.15s da
+        # margen de proceso al PLC sin penalizar cada comando.
+        self.response_delay = float(os.getenv("PLC_RESPONSE_DELAY", "0.15"))
+        self.move_ack_delay = float(os.getenv("PLC_MOVE_ACK_DELAY", "0.3"))
         # ID de máquina (lo asigna PLCManager) para persistir posición
         # comandada en la caché compartida
         self.machine_id = None
@@ -88,8 +89,11 @@ class CarouselController:
         if command == 1 and (argument is None or argument < 1):
             raise ValueError(
                 "Comando de movimiento requiere posición 1-255 (1-indexada)")
+        t0 = time.monotonic()
         try:
             with self.plc:  # Gestión automática de conexión [[2]]
+                self.logger.info(
+                    f"[PLC][T] cmd={command} conectado en {time.monotonic() - t0:.2f}s")
                 # Comando 1 (mover) es 1-indexado en la API, 0-indexado en el PLC
                 plc_argument = argument - 1 if command == 1 and argument is not None else argument
                 if command == 1 and skip_position_check:
@@ -135,20 +139,24 @@ class CarouselController:
                             }
                 self.logger.info(
                     f"[PLC] Enviando comando: {command}, argumento: {argument} (PLC: {plc_argument})")
+                t_send = time.monotonic()
                 self.plc.send_command(command, plc_argument)
                 if command == 1:
                     self._remember_position(argument)
                 # Pausa para dar tiempo al PLC a procesar el comando antes de responder
                 time.sleep(self.response_delay)
                 response = self.plc.receive_response()
+                self.logger.info(
+                    f"[PLC][T] cmd={command} respuesta en {time.monotonic() - t_send:.2f}s "
+                    f"(total socket {time.monotonic() - t0:.2f}s)")
                 # Si es comando de movimiento, el PLC responde con un ACK (21)
                 # Necesitamos esperar a que termine el movimiento y consultar el estado real
                 if command == 1:
                     # Solo esperar el ACK/arranque del movimiento; el
                     # poller WS reporta la posición real en vivo (~1s).
                     self.logger.info("[PLC] Comando de movimiento: esperando ACK...")
-                    time.sleep(self.move_ack_delay)
                     if self.move_status_after:
+                        time.sleep(self.move_ack_delay)
                         try:
                             self.plc.send_command(0)  # Comando STATUS
                             time.sleep(0.5)

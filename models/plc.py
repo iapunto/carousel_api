@@ -32,6 +32,12 @@ class PLC:
         self.ip = ip
         self.port = port
         self.sock = None
+        # Conexión persistente: el PLC Delta tarda ~2s en liberar una
+        # sesión TCP cerrada, así que abrir/cerrar por comando costaba
+        # ~2s fijos. Mantener el socket vivo reduce el roundtrip a
+        # ~0.2s. Si el PLC cierra la sesión, send/recv ya reintentan
+        # con reconnect.
+        self.persistent = True
         self.timeout = 5.0  # Timeout en segundos [[8]]
         self.logger = logging.getLogger(__name__)
         self.max_retries = 3
@@ -50,8 +56,9 @@ class PLC:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Cierra conexión al salir del bloque 'with'"""
-        self.close()
+        """Cierra conexión al salir del bloque 'with' (salvo modo persistente)"""
+        if not self.persistent:
+            self.close()
 
     def connect(self) -> bool:
         """
@@ -72,6 +79,8 @@ class PLC:
             try:
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.sock.settimeout(self.timeout)
+                self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
                 self.sock.connect((self.ip, self.port))
                 self.logger.info(
                     f"Conexión establecida con el PLC en {self.ip}:{self.port}")
@@ -108,6 +117,25 @@ class PLC:
             finally:
                 self.sock = None
 
+    def _drain_socket(self):
+        """Descarta bytes pendientes en el socket (respuestas tardías).
+
+        Con conexión persistente una respuesta que llegue después del
+        timeout contaminaría el siguiente recv — se lee y descarta todo
+        lo que haya en buffer antes de enviar un nuevo comando."""
+        if not self.sock:
+            return
+        try:
+            self.sock.setblocking(False)
+            while self.sock.recv(64):
+                pass
+        except (BlockingIOError, socket.error):
+            pass
+        finally:
+            if self.sock:
+                self.sock.setblocking(True)
+                self.sock.settimeout(self.timeout)
+
     def send_command(self, command: int, argument: int = None) -> bool:
         """
         Envía un comando al PLC con reintentos y backoff exponencial.
@@ -117,6 +145,7 @@ class PLC:
             validar_argumento(argument)
         if not self.sock:
             raise RuntimeError("No hay conexión activa con el PLC")
+        self._drain_socket()
         for attempt in range(1, self.max_retries + 1):
             try:
                 data = struct.pack('B', command)
